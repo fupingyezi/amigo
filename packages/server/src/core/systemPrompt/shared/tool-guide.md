@@ -14,15 +14,12 @@ Otherwise → Use appropriate functional tool
 
 ## XML Format
 
-```xml
 <toolName>
   <param>value</param>
 </toolName>
-```
 
 ### Nested Objects
 
-```xml
 <assignTasks>
   <tasks>
     <task>
@@ -35,11 +32,9 @@ Otherwise → Use appropriate functional tool
     </task>
   </tasks>
 </assignTasks>
-```
 
 ### Arrays
 
-```xml
 <askFollowupQuestion>
   <question>Which option?</question>
   <suggestOptions>
@@ -47,43 +42,34 @@ Otherwise → Use appropriate functional tool
     <option>Option B</option>
   </suggestOptions>
 </askFollowupQuestion>
-```
 
 ### Special Characters
 
 Use CDATA for content with `<`, `>`, `&`:
 
-```xml
 <completionResult>
   <![CDATA[if (x > 5 && y < 10) { ... }]]>
 </completionResult>
-```
 
 ## Common Mistakes
 
 ### Multiple Tools in One Response
 
 ❌ Wrong:
-```xml
 <readFile>...</readFile>
 <writeFile>...</writeFile>
-```
 
 ✅ Correct: One tool per response, wait for result, then next tool.
 
 ### Plain Text Completion
 
 ❌ Wrong:
-```
 Task done! I created the files.
-```
 
 ✅ Correct:
-```xml
 <completionResult>
   Task done! I created the files.
 </completionResult>
-```
 
 ### Wrong Tool Names
 

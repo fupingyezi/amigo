@@ -175,6 +175,28 @@ export function useSendMessage(): UseSendMessageReturn {
     [store],
   );
 
+  /**
+   * Send a delete task command to delete a specific task.
+   */
+  const sendDeleteTask = useCallback(
+    (taskId: string) => {
+      const state = store.getState();
+
+      if (!taskId || taskId.trim() === "") {
+        console.warn("[useSendMessage] Cannot send deleteTask: no task ID provided");
+        return;
+      }
+
+      state.sendMessage(taskId, {
+        type: "deleteTask",
+        data: {
+          taskId,
+        },
+      });
+    },
+    [store],
+  );
+
   return {
     sendMessage,
     sendCreateTask,
@@ -183,5 +205,6 @@ export function useSendMessage(): UseSendMessageReturn {
     sendLoadTask,
     sendConfirm,
     sendReject,
+    sendDeleteTask,
   };
 }

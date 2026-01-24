@@ -145,11 +145,14 @@ export class StreamHandler {
             fullToolCall,
             type: currentType,
           };
-          broadcaster.postMessage(conversation, {
-            role: "system",
-            content: `Waiting for confirmation to execute tool: ${currentTool}`,
+          // 只广播，不保存到消息历史（已保存在 taskStatus.json 的 pendingToolCall 中）
+          broadcaster.broadcast(conversation.id, {
             type: "waiting_tool_call",
-            partial: false,
+            data: {
+              toolName: currentTool,
+              taskId: conversation.id,
+              updateTime: Date.now(),
+            },
           });
         }
       },

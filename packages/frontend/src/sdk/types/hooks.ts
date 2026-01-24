@@ -102,4 +102,5 @@ export interface UseSendMessageReturn {
   sendLoadTask: (taskId: string) => void;
   sendConfirm: (taskId: string) => void;
   sendReject: (taskId: string) => void;
+  sendDeleteTask: (taskId: string) => void;
 }

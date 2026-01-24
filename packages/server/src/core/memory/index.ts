@@ -36,6 +36,15 @@ export class FilePersistedMemory {
   }
 
   /**
+   * 检查任务是否存在于磁盘（通过检查 original.json 文件）
+   */
+  static exists(taskId: string): boolean {
+    const storagePath = path.join(getGlobalState("globalStoragePath") || process.cwd(), taskId);
+    const originalPath = path.join(storagePath, "messages", `${StorageType.ORIGINAL}.json`);
+    return existsSync(originalPath);
+  }
+
+  /**
    * 获取当前存储路径
    */
   get storagePath() {
@@ -333,5 +342,16 @@ export class FilePersistedMemory {
     this._websocketMessages = []; // 同时清空WebSocket消息
     // 将两个文件都清空
     return this.saveOriginalToFile() && this.saveWebsocketToFile();
+  }
+
+  /**
+   * 删除会话的所有存储文件
+   */
+  public async delete(): Promise<void> {
+    const { rmSync } = await import("node:fs");
+    if (existsSync(this.storagePath)) {
+      rmSync(this.storagePath, { recursive: true, force: true });
+      logger.info(`[Memory] 已删除存储目录: ${this.storagePath}`);
+    }
   }
 }

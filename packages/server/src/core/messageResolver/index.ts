@@ -4,6 +4,7 @@ import type BaseMessageResolver from "./base";
 import { CommonMessageResolver } from "./commonMessageResolver";
 import { ConfirmMessageResolver } from "./confirmMessageResolver";
 import { CreateTaskMessageResolver } from "./createTaskMessageResolver";
+import { DeleteTaskMessageResolver } from "./deleteTaskMessageResolver";
 import { InterruptMessageResolver } from "./interruptMessageResolver";
 import { LoadTaskMessageResolver } from "./loadTaskMessageResolver";
 import { RejectMessageResolver } from "./rejectMessageResolver";
@@ -20,6 +21,7 @@ const resolvers = [
   CreateTaskMessageResolver,
   ConfirmMessageResolver,
   RejectMessageResolver,
+  DeleteTaskMessageResolver,
 ];
 
 const defaultResolver = CommonMessageResolver;

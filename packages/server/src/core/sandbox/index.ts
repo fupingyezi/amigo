@@ -80,16 +80,28 @@ export class Sandbox {
   /**
    * 容器初始化
    */
-  async init(): Promise<void> {
+  async init(taskId?: string): Promise<void> {
     if (!docker) {
       throw new Error("Docker 未初始化，请确保 Docker daemon 正在运行");
     }
 
     try {
       logger.info(`[Sandbox] Creating container with image: ${this.imageName}`);
+
+      // 添加标签以便后续识别和清理
+      const labels: Record<string, string> = {
+        "amigo.managed": "true",
+        "amigo.type": "sandbox",
+      };
+
+      if (taskId) {
+        labels["amigo.taskId"] = taskId;
+      }
+
       this.container = await docker.createContainer({
         Image: this.imageName,
         Tty: false,
+        Labels: labels,
         HostConfig: {
           Runtime: isLocal ? "runc" : "runsc",
           AutoRemove: true,
@@ -115,11 +127,23 @@ export class Sandbox {
   async destroy(): Promise<void> {
     if (this.container) {
       try {
+        // 先停止容器
         await this.container.stop();
+        logger.info("[Sandbox] 容器已停止");
       } catch (error) {
         // 容器可能已经停止，忽略错误
         logger.debug("[Sandbox] 容器停止时出错（可能已停止）:", error);
       }
+
+      try {
+        // 删除容器（即使设置了 AutoRemove，显式删除更安全）
+        await this.container.remove({ force: true });
+        logger.info("[Sandbox] 容器已删除");
+      } catch (error) {
+        // 容器可能已经被 AutoRemove 删除，忽略错误
+        logger.debug("[Sandbox] 容器删除时出错（可能已自动删除）:", error);
+      }
+
       this.container = null;
     }
   }

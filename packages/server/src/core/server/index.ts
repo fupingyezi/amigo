@@ -76,7 +76,49 @@ class AmigoServer {
               taskId = (parsedMessage.data as any).taskId?.trim() || uuidV4();
             }
 
-            // 获取或创建会话
+            // 特殊处理 loadTask：检查任务是否存在
+            if (parsedMessage.type === "loadTask") {
+              const conversation = conversationRepository.load(taskId);
+
+              if (!conversation) {
+                // 任务不存在，直接发送错误消息
+                logger.warn(`[Server] 任务不存在: ${taskId}`);
+                ws.send(
+                  JSON.stringify({
+                    type: "error",
+                    data: {
+                      message: `任务 ${taskId} 不存在`,
+                      code: "TASK_NOT_FOUND",
+                      updateTime: Date.now(),
+                    },
+                  } as WebSocketMessage<"error">),
+                );
+                return;
+              }
+
+              // 任务存在，继续正常处理
+              if (!broadcaster.hasConnection(taskId, ws)) {
+                broadcaster.addConnection(taskId, ws);
+              }
+
+              broadcaster.broadcast(taskId, {
+                type: "ack",
+                data: {
+                  taskId,
+                  targetMessage: parsedMessage,
+                  status: conversation.status === "streaming" ? "failed" : "acked",
+                },
+              });
+
+              const resolver = getResolver(
+                parsedMessage.type as USER_SEND_MESSAGE_NAME,
+                conversation,
+              );
+              await resolver.process(parsedMessage.data);
+              return;
+            }
+
+            // 其他消息类型：获取或创建会话
             const conversation = conversationRepository.getOrLoad(taskId);
 
             // 管理 WebSocket 连接

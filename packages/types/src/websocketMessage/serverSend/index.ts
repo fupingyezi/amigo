@@ -10,6 +10,7 @@ import { ConversationOverSchema } from "./conversationOver";
 import { InterruptMessageSchema } from "./interrupt";
 import { SessionHistoriesMessageSchema } from "./sessionHistories";
 import { TaskCreatedMessageSchema } from "./taskCreated";
+import { TaskDeletedSchema } from "./taskDeleted";
 import { TaskHistoryMessageSchema } from "./taskHistory";
 import { ThinkMessageSchema } from "./think";
 import { ToolMessageSchema } from "./tool";
@@ -42,6 +43,7 @@ export const BASE_SERVER_MESSAGE_SCHEMAS = [
   ErrorMessageSchema,
   AlertMessageSchema,
   TaskCreatedMessageSchema,
+  TaskDeletedSchema,
   WaitingToolCallMessageSchema,
 ] as const;
 

@@ -1,4 +1,5 @@
 import type { ConversationStatus } from "../conversation";
+import type { ChatMessage } from "../websocketMessage";
 
 /**
  * 存储类型
@@ -25,7 +26,7 @@ export interface PendingToolCall {
   toolName: string;
   params: unknown;
   fullToolCall: string;
-  type: string;
+  type: ChatMessage["type"];
 }
 
 /**

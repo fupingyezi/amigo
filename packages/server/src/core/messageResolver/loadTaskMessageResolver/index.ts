@@ -13,10 +13,7 @@ export class LoadTaskMessageResolver extends BaseMessageResolver<"loadTask"> {
     // 发送历史消息给前端
     await changeCurrentTaskId(taskId, this.conversation, broadcaster);
 
-    // 加载目标会话
-    const targetConversation = conversationRepository.getOrLoad(taskId);
-
-    if (targetConversation.status === "aborted") {
+    if (this.conversation.status === "aborted") {
       logger.info(`[LoadTaskMessageResolver] 任务 ${taskId} 处于中断状态，可以使用 resume 恢复`);
     }
   }

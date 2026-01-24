@@ -24,7 +24,7 @@ export class SandboxRegistry {
     if (!sandbox) {
       logger.info(`[SandboxRegistry] No existing sandbox, creating new one for: ${parentId}`);
       sandbox = new Sandbox(imageName);
-      await sandbox.init();
+      await sandbox.init(parentId); // 传递 taskId 用于标签
       this.sandboxes.set(parentId, sandbox);
       this.refCounts.set(parentId, 0);
       logger.info(`[SandboxRegistry] 创建 sandbox: ${parentId}`);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ConfirmSchema } from "./confirm";
 import { CreateTaskSchema } from "./createTask";
+import { DeleteTaskSchema } from "./deleteTask";
 import { IntertuptSchema } from "./interrupt";
 import { LoadTaskSchema } from "./loadTask";
 import { MessageSchema as SocketMessageSchema } from "./message";
@@ -15,6 +16,7 @@ export const UserSendMessageSchema = z.discriminatedUnion("type", [
   CreateTaskSchema,
   ConfirmSchema,
   RejectSchema,
+  DeleteTaskSchema,
 ]);
 
 /**

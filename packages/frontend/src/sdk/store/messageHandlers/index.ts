@@ -5,6 +5,7 @@ import { handleDefault } from "./defaultHandler";
 import { handleSessionHistories } from "./sessionHistoriesHandler";
 import { handleStateChange } from "./stateChangeHandler";
 import { handleTaskCreated } from "./taskCreatedHandler";
+import { handleTaskDeleted } from "./taskDeletedHandler";
 import { handleTaskHistory } from "./taskHistoryHandler";
 import { handleWaitingToolCall } from "./waitingToolCallHandler";
 
@@ -18,10 +19,8 @@ const handlers: Partial<Record<SERVER_SEND_MESSAGE_NAME, MessageHandler>> = {
   interrupt: handleStateChange,
   alert: handleStateChange,
   taskHistory: handleTaskHistory,
-  taskCreated: (message, store) => {
-    handleTaskCreated.call(store, message.data);
-    return false;
-  },
+  taskCreated: handleTaskCreated,
+  taskDeleted: handleTaskDeleted,
 };
 
 export const getMessageHandler = (type: SERVER_SEND_MESSAGE_NAME): MessageHandler => {
