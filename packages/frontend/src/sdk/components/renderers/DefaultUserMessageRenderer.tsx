@@ -5,11 +5,7 @@ import type { UserMessageRendererProps } from "../../types/renderers";
 /**
  * Default renderer for user message type
  */
-export const DefaultUserMessageRenderer: React.FC<UserMessageRendererProps> = ({
-  message,
-  taskId: _taskId,
-  isLatest: _isLatest,
-}) => {
+export const DefaultUserMessageRenderer: React.FC<UserMessageRendererProps> = ({ message }) => {
   const isPending = message.status === "pending";
 
   return (

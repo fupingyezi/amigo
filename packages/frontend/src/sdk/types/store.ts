@@ -12,9 +12,21 @@ import type { DisplayMessageType } from "../messages/types";
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
 
 /**
- * Task status
+ * Task status - represents the state machine of a task
+ * - idle: Task is waiting for user input or has completed
+ * - streaming: LLM is actively generating a response
+ * - interrupted: Task was paused by user or system
+ * - completed: Task finished successfully
+ * - error: Task encountered an error
+ * - waiting_tool_call: Task is waiting for tool confirmation
  */
-export type TaskStatus = "active" | "completed" | "interrupted" | "error";
+export type TaskStatus =
+  | "idle"
+  | "streaming"
+  | "interrupted"
+  | "completed"
+  | "error"
+  | "waiting_tool_call";
 
 /**
  * Task state
@@ -24,8 +36,12 @@ export interface TaskState {
     WebSocketMessage<SERVER_SEND_MESSAGE_NAME> | WebSocketMessage<"userSendMessage">
   >;
   displayMessages: DisplayMessageType[];
-  isLoading: boolean;
+  status: TaskStatus;
   lastUpdateTime: number;
+  pendingToolCall?: {
+    toolName: string;
+    params: any;
+  };
 }
 
 /**
@@ -93,7 +109,7 @@ export interface WebSocketStore {
   registerTask: (taskId: string) => void;
   unregisterTask: (taskId: string) => void;
   setActiveTask: (taskId: string | null) => void;
-  setLoading: (taskId: string, isLoading: boolean) => void;
+  setTaskStatus: (taskId: string, status: TaskStatus) => void;
   clearMessages: (taskId: string) => void;
   setMainTaskId: (taskId: string) => void;
   createNewConversation: () => void;

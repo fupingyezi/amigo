@@ -195,7 +195,6 @@ describe("Property 5: Message Processing Order", () => {
           "interrupt",
           "error",
           "alert",
-          "assignTaskUpdated",
         ]);
 
         for (const type of outputTypes) {

@@ -285,6 +285,41 @@ export function getCompletedItems(content: string): ChecklistItem[] {
 }
 
 /**
+ * 更新 checklist 项的内容（描述和状态）
+ * @param content 文档内容
+ * @param lineNumber 行号
+ * @param newDescription 新的任务描述
+ * @param newCompleted 新的完成状态（可选，如果不传则保持原样）
+ * @returns 更新后的文档内容
+ */
+export function updateChecklistItemContent(
+  content: string,
+  lineNumber: number,
+  newDescription: string,
+  newCompleted?: boolean,
+): string {
+  const lines = content.split("\n");
+
+  if (lineNumber < 0 || lineNumber >= lines.length) {
+    return content;
+  }
+
+  const line = lines[lineNumber];
+  const item = parseChecklistLine(line || "", lineNumber);
+
+  if (!item) {
+    return content;
+  }
+
+  const isCompleted = newCompleted !== undefined ? newCompleted : item.completed;
+  const newCheckmark = isCompleted ? "x" : " ";
+  const indent = " ".repeat(item.indentLevel);
+  lines[lineNumber] = `${indent}- [${newCheckmark}] ${newDescription}`;
+
+  return lines.join("\n");
+}
+
+/**
  * 检查所有 checklist 项是否都已完成
  * @param content 文档内容
  * @returns 是否全部完成

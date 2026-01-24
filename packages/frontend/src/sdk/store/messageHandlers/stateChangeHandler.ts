@@ -6,12 +6,27 @@ export const handleStateChange: MessageHandler = (message, store) => {
   const taskId = messageData.taskId || store.mainTaskId;
 
   switch (message.type) {
-    case "conversationOver":
+    case "conversationOver": {
+      const reason = messageData.reason;
+
+      // State machine transition based on reason
+      if (reason === "interrupt") {
+        store.setTaskStatus(taskId, "interrupted");
+      } else if (reason === "error") {
+        store.setTaskStatus(taskId, "error");
+      } else if (reason === "completionResult") {
+        store.setTaskStatus(taskId, "completed");
+      } else {
+        // Default to idle for other reasons (askFollowupQuestion, etc.)
+        store.setTaskStatus(taskId, "idle");
+      }
+      break;
+    }
     case "interrupt":
-      store.setLoading(taskId, false);
+      store.setTaskStatus(taskId, "interrupted");
       break;
     case "alert":
-      store.setLoading(taskId, false);
+      store.setTaskStatus(taskId, "error");
       toast.error(messageData.message);
       break;
   }

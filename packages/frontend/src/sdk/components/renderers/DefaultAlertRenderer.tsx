@@ -7,7 +7,6 @@ import type { AlertRendererProps } from "../../types/renderers";
  */
 export const DefaultAlertRenderer: React.FC<AlertRendererProps> = ({
   message,
-  taskId: _taskId,
   isLatest: _isLatest,
 }) => {
   const alertData = message.data;

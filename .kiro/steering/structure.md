@@ -51,9 +51,13 @@ src/
 │   ├── conversation/            # Conversation management (refactored)
 │   │   ├── Conversation.ts      # Conversation entity (state container)
 │   │   ├── ConversationRepository.ts  # Conversation storage and retrieval
-│   │   ├── ConversationExecutor.ts    # LLM interaction and tool execution
+│   │   ├── ConversationExecutor.ts    # Execution coordinator and abort control
+│   │   ├── ToolExecutor.ts      # Tool execution and result processing
+│   │   ├── StreamHandler.ts     # LLM streaming and XML parsing
+│   │   ├── CompletionHandler.ts # Completion logic for different tool types
 │   │   ├── WebSocketBroadcaster.ts    # WebSocket connection and messaging
 │   │   ├── TaskOrchestrator.ts        # Parent-child task management
+│   │   ├── SubTaskManager.ts    # Sub-task lifecycle management
 │   │   └── index.ts             # Public exports
 │   ├── memory/                  # Persistent storage layer
 │   ├── messageResolver/         # WebSocket message handlers
@@ -142,7 +146,10 @@ The conversation system is split into focused components:
 
 - **Conversation**: Pure entity holding state (id, memory, status, userInput)
 - **ConversationRepository**: Manages conversation lifecycle (create, get, load from disk)
-- **ConversationExecutor**: Handles LLM streaming and tool execution
+- **ConversationExecutor**: Coordinates execution flow and manages abort control
+- **ToolExecutor**: Handles tool execution and result processing
+- **StreamHandler**: Manages LLM streaming and XML parsing
+- **CompletionHandler**: Processes completion logic for different tool types
 - **WebSocketBroadcaster**: Manages WebSocket connections and message broadcasting
 - **TaskOrchestrator**: Coordinates parent-child task relationships
 

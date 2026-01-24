@@ -3,7 +3,7 @@ import type { ChatOpenAI } from "@langchain/openai";
 import { getGlobalState } from "@/globalState";
 import { logger } from "@/utils/logger";
 import { getLlm } from "../model";
-import { BASIC_TOOLS, CUSTOMED_TOOLS, ToolService } from "../tools";
+import { CUSTOMED_TOOLS, MAIN_BASIC_TOOLS, SUB_BASIC_TOOLS, ToolService } from "../tools";
 import { Conversation, type ConversationType } from "./Conversation";
 
 /**
@@ -72,8 +72,11 @@ export class ConversationRepository {
     const allCustomTools = getAllCustomTools();
     const type = params?.type || "main";
 
+    // 根据任务类型过滤基础工具
+    const baseTools = type === "main" ? MAIN_BASIC_TOOLS : SUB_BASIC_TOOLS;
+
     const toolService = new ToolService(
-      BASIC_TOOLS,
+      baseTools,
       params?.tools || (type === "main" ? allCustomTools : []),
     );
 

@@ -68,12 +68,6 @@ export interface UserSendMessageDisplayType {
   type: "userSendMessage";
 }
 
-export interface AssignTaskUpdatedDisplayType extends MessageType<"assignTaskUpdated"> {
-  index: number;
-  taskId: string;
-  parentTaskId?: string;
-}
-
 export interface InterruptDisplayType extends MessageType<"interrupt"> {}
 
 export interface ErrorDisplayType extends MessageType<"error"> {
@@ -93,7 +87,6 @@ export type DisplayMessageType =
   | FrontendToolMessageType<any>
   | AskFollowupQuestionType
   | UserSendMessageDisplayType
-  | AssignTaskUpdatedDisplayType
   | InterruptDisplayType
   | ErrorDisplayType
   | AlertDisplayType;

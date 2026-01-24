@@ -141,11 +141,47 @@ export function useSendMessage(): UseSendMessageReturn {
     [store],
   );
 
+  const sendConfirm = useCallback(
+    (taskId: string) => {
+      const state = store.getState();
+
+      state.sendMessage(taskId, {
+        type: "confirm",
+        data: {
+          taskId,
+        },
+      });
+
+      state.setTaskStatus(taskId, "tool_executing");
+      state.setPendingToolCall(taskId, undefined);
+    },
+    [store],
+  );
+
+  const sendReject = useCallback(
+    (taskId: string) => {
+      const state = store.getState();
+
+      state.sendMessage(taskId, {
+        type: "reject",
+        data: {
+          taskId,
+        },
+      });
+
+      state.setTaskStatus(taskId, "idle");
+      state.setPendingToolCall(taskId, undefined);
+    },
+    [store],
+  );
+
   return {
     sendMessage,
     sendCreateTask,
     sendInterrupt,
     sendResume,
     sendLoadTask,
+    sendConfirm,
+    sendReject,
   };
 }

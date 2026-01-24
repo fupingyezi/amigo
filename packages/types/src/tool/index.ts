@@ -1,32 +1,32 @@
 import { z } from "zod";
 import { AskFollowupQuestionSchema } from "./askFollowupQuestions";
-import { TaskListSchema } from "./assingTasks";
 import { BashSchema } from "./bash";
 import { BrowserSearchSchema } from "./browserSearch";
+import { CompleteTaskSchema } from "./completeTask";
 import { CompletionResultSchema } from "./completionResult";
 import type { ToolExecutionContext } from "./context";
 import { EditFileSchema } from "./editFile";
 import { ReadFileSchema } from "./readFile";
 import {
   CreateTaskDocsSchema,
+  ExecuteTaskListSchema,
   GetTaskListProgressSchema,
   ReadTaskDocsSchema,
   UpdateTaskListSchema,
 } from "./taskDocs";
-import { TodoListSchema } from "./updateTodolist";
 
 export type { ToolExecutionContext } from "./context";
 
 export const toolSchemas = z.discriminatedUnion("name", [
   AskFollowupQuestionSchema,
-  TaskListSchema,
-  TodoListSchema,
   CompletionResultSchema,
+  CompleteTaskSchema,
   BrowserSearchSchema,
   CreateTaskDocsSchema,
   ReadTaskDocsSchema,
   UpdateTaskListSchema,
   GetTaskListProgressSchema,
+  ExecuteTaskListSchema,
   EditFileSchema,
   ReadFileSchema,
   BashSchema,

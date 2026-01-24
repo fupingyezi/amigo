@@ -20,12 +20,12 @@ const NewChatButton: React.FC = () => {
   return (
     <button
       onClick={handleClick}
-      className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-100 hover:bg-neutral-200 transition-colors"
+      className="w-full h-12 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all text-gray-900"
       type="button"
     >
-      <Plus className="w-4 h-4 shrink-0" />
+      <Plus className="w-5 h-5 shrink-0 text-gray-600" />
       <span
-        className={`text-sm font-medium whitespace-nowrap transition-opacity duration-150 ${
+        className={`text-sm font-medium tracking-tight transition-opacity duration-150 ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
         style={{ display: isOpen ? "inline" : "none" }}

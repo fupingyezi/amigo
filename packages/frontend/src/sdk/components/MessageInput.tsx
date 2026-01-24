@@ -8,6 +8,7 @@ import { useConnection } from "../hooks/useConnection";
 import { useMentions } from "../hooks/useMentions";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { useTasks } from "../hooks/useTasks";
+import { ToolConfirmationRequest } from "./ToolConfirmationRequest";
 
 /**
  * Props for the MessageInput component
@@ -72,10 +73,15 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
     const { sendMessage, sendInterrupt, sendResume, sendCreateTask } = useSendMessage();
     const { getMentionSuggestions } = useMentions();
     const { isConnected } = useConnection();
-    const { mainTaskId } = useTasks();
+    const { mainTaskId, tasks } = useTasks();
     const [targetSessionId, setTargetSessionId] = useState<string | null>(null);
     const [buttonState, setButtonState] = useState<"send" | "stop" | "resume">("send");
     const isSuggestionActiveRef = useRef(false);
+
+    // Get current task's status
+    const currentTaskId = taskId || mainTaskId;
+    const currentTask = currentTaskId ? tasks[currentTaskId] : null;
+    const taskStatus = currentTask?.status || "idle";
 
     // Create mention suggestion configuration
     const suggestionConfig = showMentions
@@ -197,16 +203,19 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
       editable: !disabled,
     });
 
-    // Update button state based on connection and content
+    // Update button state based on task status
     useEffect(() => {
       if (!isConnected) {
         setButtonState("resume");
-      } else if (editor?.getText().trim()) {
-        setButtonState("send");
+      } else if (taskStatus === "streaming") {
+        setButtonState("stop");
+      } else if (taskStatus === "interrupted") {
+        setButtonState("resume");
       } else {
+        // idle, completed, error states
         setButtonState("send");
       }
-    }, [isConnected, editor?.getText()]);
+    }, [isConnected, taskStatus]);
 
     // Insert mention to editor
     const insertMention = useCallback(
@@ -365,18 +374,19 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
       <div className={`message-input-container ${className}`}>
         <style>{editorStyles}</style>
         <div className="tiptap-editor-wrapper">
+          <ToolConfirmationRequest taskId={currentTaskId || ""} className="mb-4" />
           <EditorContent editor={editor} />
           <div className="send-button-wrapper">
             <button
               onClick={handleClick}
-              className={`btn btn-circle w-10 h-10 transition-all duration-200 border-0 ${
+              className={`btn btn-circle w-10 h-10 transition-all duration-200 border-none shadow-md hover:shadow-lg ${
                 buttonState === "stop"
                   ? "bg-red-500 hover:bg-red-600 text-white"
                   : buttonState === "resume"
                     ? "bg-green-500 hover:bg-green-600 text-white"
                     : isButtonDisabled
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-500 hover:bg-blue-600 text-white"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
               type="button"
               disabled={isButtonDisabled}
@@ -402,8 +412,9 @@ const editorStyles = `
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 32px 24px;
-    background: #fafafa;
+    padding: 24px;
+    background: #ffffff;
+    border-top: 1px solid #f3f4f6;
     z-index: 10;
   }
 
@@ -414,52 +425,36 @@ const editorStyles = `
   }
   
   .tiptap-editor-wrapper .ProseMirror {
-    min-height: 80px;
+    min-height: 56px;
     max-height: 240px;
     overflow-y: auto;
-    padding: 16px 60px 16px 20px;
+    padding: 12px 60px 12px 16px;
     border-radius: 16px;
-    border: 1px solid #e5e5e5;
+    border: 1px solid #e5e7eb;
     background-color: #ffffff;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     font-size: 15px;
-    line-height: 1.6;
-    transition: border-color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+    font-weight: 400;
+    line-height: 1.5;
+    transition: all 200ms ease-in-out;
     outline: none;
   }
 
-  .tiptap-editor-wrapper .ProseMirror::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .tiptap-editor-wrapper .ProseMirror::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .tiptap-editor-wrapper .ProseMirror::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
-    border-radius: 3px;
-  }
-
-  .tiptap-editor-wrapper .ProseMirror::-webkit-scrollbar-thumb:hover {
-    background: #a3a3a3;
-  }
-  
   .tiptap-editor-wrapper .ProseMirror:focus {
     border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     outline: none;
   }
 
   .send-button-wrapper {
     position: absolute;
-    right: 10px;
-    bottom: 10px;
+    right: 8px;
+    bottom: 8px;
     z-index: 10;
   }
-  
+
   .tiptap-editor-wrapper .ProseMirror p.is-editor-empty:first-child::before {
-    color: #a3a3a3;
+    color: #9ca3af;
     content: attr(data-placeholder);
     float: left;
     height: 0;

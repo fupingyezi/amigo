@@ -9,7 +9,6 @@
 import type { MessageRendererMap } from "../../types/renderers";
 import { DefaultAlertRenderer } from "./DefaultAlertRenderer";
 import { DefaultAskFollowupQuestionRenderer } from "./DefaultAskFollowupQuestionRenderer";
-import { DefaultAssignTaskUpdatedRenderer } from "./DefaultAssignTaskUpdatedRenderer";
 import { DefaultCompletionResultRenderer } from "./DefaultCompletionResultRenderer";
 import { DefaultErrorRenderer } from "./DefaultErrorRenderer";
 import { DefaultInterruptRenderer } from "./DefaultInterruptRenderer";
@@ -52,12 +51,10 @@ export const defaultRenderers: MessageRendererMap = {
   interrupt: (props) => <DefaultInterruptRenderer {...props} />,
   error: (props) => <DefaultErrorRenderer {...props} />,
   alert: (props) => <DefaultAlertRenderer {...props} />,
-  assignTaskUpdated: (props) => <DefaultAssignTaskUpdatedRenderer {...props} />,
 };
 
 export { DefaultAlertRenderer } from "./DefaultAlertRenderer";
 export { DefaultAskFollowupQuestionRenderer } from "./DefaultAskFollowupQuestionRenderer";
-export { DefaultAssignTaskUpdatedRenderer } from "./DefaultAssignTaskUpdatedRenderer";
 export { DefaultCompletionResultRenderer } from "./DefaultCompletionResultRenderer";
 export { DefaultErrorRenderer } from "./DefaultErrorRenderer";
 export { DefaultInterruptRenderer } from "./DefaultInterruptRenderer";
@@ -69,4 +66,3 @@ export { DefaultUserMessageRenderer } from "./DefaultUserMessageRenderer";
 // Re-export tool-specific renderers
 export { DefaultAssignTaskRenderer } from "./tools/DefaultAssignTaskRenderer";
 export { DefaultBrowserSearchRenderer } from "./tools/DefaultBrowserSearchRenderer";
-export { DefaultUpdateTodolistRenderer } from "./tools/DefaultUpdateTodolistRenderer";

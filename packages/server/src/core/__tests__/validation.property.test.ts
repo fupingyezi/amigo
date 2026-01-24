@@ -65,6 +65,20 @@ function generateToolXml(toolName: string, params: Record<string, string>): stri
   return `<${toolName}>${paramsXml}</${toolName}>`;
 }
 
+/**
+ * 创建一个测试用的 ToolExecutionContext
+ */
+function createTestContext(): any {
+  return {
+    taskId: "test-task",
+    parentId: null,
+    getSandbox: () => ({ workingDirectory: "/test" }),
+    getToolByName: () => undefined,
+    signal: undefined,
+    postMessage: () => {},
+  };
+}
+
 // ============================================================================
 // 测试生成器 (Arbitraries)
 // ============================================================================
@@ -98,7 +112,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeUndefined();
@@ -120,7 +134,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeUndefined();
@@ -142,7 +156,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeUndefined();
@@ -161,7 +175,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeUndefined();
@@ -182,7 +196,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeDefined();
@@ -201,7 +215,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeDefined();
@@ -222,7 +236,7 @@ describe("验证属性测试", () => {
 
             const result = await toolService.parseAndExecute({
               xmlParams: xml,
-              getCurrentTask: () => "test-task",
+              context: createTestContext(),
             });
 
             expect(result.error).toBeUndefined();

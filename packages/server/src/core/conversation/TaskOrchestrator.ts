@@ -5,6 +5,7 @@ import { getLlm } from "../model";
 import type { Conversation } from "./Conversation";
 import { ConversationExecutor } from "./ConversationExecutor";
 import { conversationRepository } from "./ConversationRepository";
+import { SubTaskManager } from "./SubTaskManager";
 import { broadcaster } from "./WebSocketBroadcaster";
 
 export interface SubTaskParams {
@@ -14,6 +15,7 @@ export interface SubTaskParams {
   // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
   tools: ToolInterface<any>[];
   index?: number;
+  taskDescription?: string; // 可选：用于 SubTaskManager 记录状态
 }
 
 /**
@@ -44,8 +46,8 @@ export class TaskOrchestrator {
   /**
    * 创建并运行子任务
    */
-  async runSubTask(params: SubTaskParams): Promise<string> {
-    const { subPrompt, parentId, tools, target, index = 0 } = params;
+  async runSubTask(params: SubTaskParams): Promise<{ subTaskId: string; result: string }> {
+    const { subPrompt, parentId, tools, target, index = 0, taskDescription } = params;
 
     // 获取父会话
     const parentConversation = conversationRepository.get(parentId);
@@ -61,6 +63,12 @@ export class TaskOrchestrator {
       tools,
       llm: getLlm(),
     });
+
+    // 如果提供了 taskDescription，记录到 SubTaskManager
+    if (taskDescription) {
+      const subTaskManager = new SubTaskManager(parentId);
+      subTaskManager.markTaskInProgress(taskDescription, subConversation.id);
+    }
 
     // 保存工具名称用于恢复
     const toolNames = tools.map((t) => t.name);
@@ -92,6 +100,13 @@ export class TaskOrchestrator {
 
     logger.info(`子会话 ${subConversation.id} 已完成。`);
 
+    // 如果提供了 taskDescription，更新状态为完成
+    if (taskDescription) {
+      const { SubTaskManager } = await import("./SubTaskManager");
+      const subTaskManager = new SubTaskManager(parentId);
+      subTaskManager.markTaskCompleted(taskDescription);
+    }
+
     // 发送子任务完成消息
     const completedMessage = {
       type: "assignTaskUpdated" as SERVER_SEND_MESSAGE_NAME,
@@ -108,8 +123,11 @@ export class TaskOrchestrator {
     // 清理执行器
     this.removeExecutor(subConversation.id);
 
-    // 获取结果
-    return this.getCompletionResult(subConversation);
+    // 获取结果并返回子任务 ID
+    return {
+      subTaskId: subConversation.id,
+      result: this.getCompletionResult(subConversation),
+    };
   }
 
   /**
@@ -145,6 +163,26 @@ export class TaskOrchestrator {
    * 中断会话
    */
   interrupt(conversation: Conversation): void {
+    if (["aborted", "idle", "completed"].includes(conversation.status)) {
+      logger.info(`会话状态为 ${conversation.status}，无需打断。`);
+      return;
+    }
+
+    // 如果正在等待工具确认，取消确认
+    if (conversation.status === "waiting_tool_confirmation") {
+      logger.info("取消工具确认");
+      conversation.pendingToolCall = null;
+      conversation.status = "aborted";
+      conversation.userInput = "";
+
+      broadcaster.broadcast(conversation.id, {
+        type: "conversationOver",
+        data: { reason: "interrupt" },
+      });
+
+      return;
+    }
+
     logger.info("会话已被打断。");
     conversation.isAborted = true;
 

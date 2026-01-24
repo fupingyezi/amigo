@@ -90,14 +90,12 @@ export {
   DefaultAlertRenderer,
   DefaultAskFollowupQuestionRenderer,
   DefaultAssignTaskRenderer,
-  DefaultAssignTaskUpdatedRenderer,
   DefaultBrowserSearchRenderer,
   DefaultCompletionResultRenderer,
   DefaultErrorRenderer,
   DefaultInterruptRenderer,
   DefaultMessageRenderer,
   DefaultToolRenderer,
-  DefaultUpdateTodolistRenderer,
   DefaultUserMessageRenderer,
   defaultRenderers,
 } from "./components/renderers";
@@ -105,7 +103,6 @@ export {
 export type {
   AlertRendererProps,
   AskFollowupQuestionRendererProps,
-  AssignTaskUpdatedRendererProps,
   CommonMessageRendererProps,
   CompletionResultRendererProps,
   ErrorRendererProps,

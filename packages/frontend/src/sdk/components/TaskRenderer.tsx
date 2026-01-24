@@ -27,7 +27,7 @@ interface StatusIconProps {
   hasError: boolean;
   isCompleted: boolean;
   hasFollowupQuestion: boolean;
-  isLoading: boolean;
+  isStreaming: boolean;
 }
 
 /**
@@ -37,12 +37,12 @@ const StatusIcon: FC<StatusIconProps> = ({
   hasError,
   isCompleted,
   hasFollowupQuestion,
-  isLoading,
+  isStreaming,
 }) => {
   if (hasError) return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
   if (isCompleted) return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
   if (hasFollowupQuestion) return <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />;
-  if (isLoading) return <Loader className="w-3.5 h-3.5 text-blue-500 animate-spin" />;
+  if (isStreaming) return <Loader className="w-3.5 h-3.5 text-blue-500 animate-spin" />;
   return <div className="w-3.5 h-3.5 rounded-full bg-gray-300" />;
 };
 
@@ -82,13 +82,13 @@ export const TaskRenderer: FC<TaskRendererProps> = ({
   const hasChildren = taskHierarchy.children.length > 0;
 
   // Analyze task state
-  const isLoading = task?.isLoading || false;
+  const isStreaming = task?.status === "streaming";
   const isCompleted = taskStatus === "completed";
   const hasError = taskStatus === "error";
 
   // Check for followup questions in messages
   const hasFollowupQuestion = messages.some(
-    (msg) => msg.type === "askFollowupQuestion" && !(msg as any).disabled,
+    (msg) => msg.type === "askFollowupQuestion" && !msg.disabled,
   );
 
   // Auto-expand if there are followup questions
@@ -111,7 +111,7 @@ export const TaskRenderer: FC<TaskRendererProps> = ({
       if (customRenderer) {
         return (
           <div key={`${message.type}-${message.updateTime}-${index}`}>
-            {(customRenderer as any)({ message, isLatest })}
+            {customRenderer({ message: message as never, isLatest })}
           </div>
         );
       }
@@ -177,7 +177,7 @@ export const TaskRenderer: FC<TaskRendererProps> = ({
               hasError={hasError}
               isCompleted={isCompleted}
               hasFollowupQuestion={hasFollowupQuestion}
-              isLoading={isLoading}
+              isStreaming={isStreaming}
             />
           </div>
 
@@ -199,7 +199,7 @@ export const TaskRenderer: FC<TaskRendererProps> = ({
             )}
 
             {/* Loading indicator */}
-            {isLoading && (
+            {isStreaming && (
               <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
                 <Loader className="w-4 h-4 animate-spin" />
                 <span>Processing...</span>
@@ -222,7 +222,7 @@ export const TaskRenderer: FC<TaskRendererProps> = ({
             )}
 
             {/* Empty state */}
-            {!isLoading && messages.length === 0 && (!showChildren || !hasChildren) && (
+            {!isStreaming && messages.length === 0 && (!showChildren || !hasChildren) && (
               <div className="text-xs text-gray-400 py-2">No messages yet</div>
             )}
           </div>

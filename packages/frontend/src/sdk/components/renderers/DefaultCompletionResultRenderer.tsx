@@ -9,29 +9,31 @@ import type { CompletionResultRendererProps } from "../../types/renderers";
  */
 export const DefaultCompletionResultRenderer: React.FC<CompletionResultRendererProps> = ({
   message,
-  taskId: _taskId,
-  isLatest: _isLatest,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="flex justify-center w-full mb-3">
-      <div className="px-3 py-2 bg-success/10 rounded-lg text-success text-xs w-[80%]">
+    <div className="flex justify-center w-full mb-4">
+      <div className="border border-green-200 rounded-xl overflow-hidden bg-white shadow-sm w-[85%]">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 w-full text-left cursor-pointer"
+          className="flex items-center gap-3 w-full px-4 py-3 text-left cursor-pointer hover:bg-green-50/50 transition-colors"
         >
-          <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="flex-1 font-medium">任务完成</span>
+          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+          </div>
+          <span className="flex-1 font-semibold text-sm text-gray-900 tracking-wide">
+            任务执行成功
+          </span>
           {isExpanded ? (
-            <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+            <ChevronDown className="w-4 h-4 text-gray-500" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-500" />
           )}
         </button>
         {isExpanded && (
-          <div className="mt-2 pt-2 border-t border-success/20 text-neutral-700 break-words">
+          <div className="p-4 bg-white border-t border-green-100 text-gray-700 break-words text-sm leading-relaxed prose prose-sm max-w-none prose-neutral">
             <Streamdown>{message.result}</Streamdown>
           </div>
         )}

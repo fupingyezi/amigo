@@ -107,19 +107,20 @@ export const ConversationHistory: FC<ConversationHistoryProps> = ({
           const isActive = history.taskId === currentTaskId;
 
           return (
-            <li key={history.taskId}>
+            <li key={history.taskId} className="mb-3">
               <button
                 type="button"
                 className={`
                   w-full text-left
-                  px-3 py-2.5
-                  rounded-lg
+                  px-4 py-3
+                  rounded-xl
                   text-sm
-                  transition-colors duration-150
+                  transition-all duration-150
+                  border
                   ${
                     isActive
-                      ? "bg-blue-50 text-blue-600 font-medium border border-blue-200"
-                      : "text-gray-700 hover:bg-gray-100 border border-transparent"
+                      ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm"
+                      : "bg-white border-transparent text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   }
                 `}
                 onClick={() => handleHistoryClick(history.taskId)}

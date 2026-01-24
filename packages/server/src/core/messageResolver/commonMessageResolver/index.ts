@@ -7,7 +7,12 @@ export class CommonMessageResolver extends BaseMessageResolver<"userSendMessage"
 
   override async process(message: { message: string; taskId: string }): Promise<void> {
     taskOrchestrator.setUserInput(this.conversation, message.message);
-    const manualExecuteStatus: ConversationStatus[] = ["completed", "aborted", "idle"];
+    const manualExecuteStatus: ConversationStatus[] = [
+      "completed",
+      "aborted",
+      "idle",
+      "waiting_tool_confirmation",
+    ];
     // 启动执行（如果还没有在执行）
     if (manualExecuteStatus.includes(this.conversation.status)) {
       const executor = taskOrchestrator.getExecutor(this.conversation.id);

@@ -12,13 +12,12 @@ export const TaskDocReadPhaseSchema = z.enum(["requirements", "design", "taskLis
 
 /**
  * CreateTaskDocs 工具 Schema
- * 用于在沙箱中创建任务文档
+ * 用于创建当前任务的文档（每个任务只有三个固定文档）
  */
 export const CreateTaskDocsSchema = z.object({
   name: z.literal("createTaskDocs"),
   params: z
     .object({
-      taskName: z.string().describe("任务名称，将自动转换为 kebab-case 格式"),
       phase: TaskDocPhaseSchema.describe("文档类型：requirements、design、taskList"),
       content: z.string().describe("文档内容，使用 Markdown 格式"),
     })
@@ -34,13 +33,12 @@ export const CreateTaskDocsSchema = z.object({
 
 /**
  * ReadTaskDocs 工具 Schema
- * 用于从沙箱中读取任务文档
+ * 用于读取当前任务的文档
  */
 export const ReadTaskDocsSchema = z.object({
   name: z.literal("readTaskDocs"),
   params: z
     .object({
-      taskName: z.string().describe("任务名称，将自动转换为 kebab-case 格式"),
       phase: TaskDocReadPhaseSchema.describe("要读取的文档类型，或 'all' 读取所有文档"),
     })
     .describe("读取任务文档的参数"),
@@ -91,13 +89,12 @@ export const TaskProgressSchema = z.object({
 
 /**
  * UpdateTaskList 工具 Schema
- * 用于更新 taskList.md 中的任务状态
+ * 用于更新当前任务的 taskList.md 中的任务状态
  */
 export const UpdateTaskListSchema = z.object({
   name: z.literal("updateTaskList"),
   params: z
     .object({
-      taskName: z.string().describe("任务名称，将自动转换为 kebab-case 格式"),
       taskDescription: z.string().describe("要更新的任务描述，必须精确匹配"),
       completed: z.union([z.boolean(), z.string()]).describe("任务是否完成"),
     })
@@ -117,15 +114,11 @@ export const UpdateTaskListSchema = z.object({
 
 /**
  * GetTaskListProgress 工具 Schema
- * 用于获取 taskList.md 的进度统计
+ * 用于获取当前任务的 taskList.md 进度统计
  */
 export const GetTaskListProgressSchema = z.object({
   name: z.literal("getTaskListProgress"),
-  params: z
-    .object({
-      taskName: z.string().describe("任务名称，将自动转换为 kebab-case 格式"),
-    })
-    .describe("获取任务进度的参数"),
+  params: z.object({}).describe("获取任务进度的参数（无需参数）"),
   result: z
     .object({
       success: z.boolean().describe("操作是否成功"),
@@ -136,6 +129,34 @@ export const GetTaskListProgressSchema = z.object({
       completedTasks: z.array(z.string()).optional().describe("已完成任务列表"),
     })
     .describe("获取任务进度的结果"),
+});
+
+/**
+ * ExecuteTaskList 工具 Schema
+ * 用于执行当前任务的 taskList.md 中的任务
+ */
+export const ExecuteTaskListSchema = z.object({
+  name: z.literal("executeTaskList"),
+  params: z.object({}).describe("执行任务列表的参数（无需参数）"),
+  result: z
+    .object({
+      success: z.boolean().describe("操作是否成功"),
+      message: z.string().describe("操作结果消息"),
+      executed: z.boolean().optional().describe("是否执行了任务"),
+      executionResults: z
+        .array(
+          z.object({
+            target: z.string().describe("任务目标"),
+            summary: z.string().describe("执行结果摘要"),
+            requestedTools: z.number().describe("请求的工具数量"),
+            availableTools: z.number().describe("可用的工具数量"),
+            invalidTools: z.array(z.string()).optional().describe("无效的工具列表"),
+          }),
+        )
+        .optional()
+        .describe("任务执行结果列表"),
+    })
+    .describe("执行任务列表的结果"),
 });
 
 /**
@@ -157,6 +178,16 @@ export type GetTaskListProgressParams = z.infer<typeof GetTaskListProgressSchema
  * GetTaskListProgress 结果类型
  */
 export type GetTaskListProgressResult = z.infer<typeof GetTaskListProgressSchema>["result"];
+
+/**
+ * ExecuteTaskList 参数类型
+ */
+export type ExecuteTaskListParams = z.infer<typeof ExecuteTaskListSchema>["params"];
+
+/**
+ * ExecuteTaskList 结果类型
+ */
+export type ExecuteTaskListResult = z.infer<typeof ExecuteTaskListSchema>["result"];
 
 /**
  * 任务进度类型

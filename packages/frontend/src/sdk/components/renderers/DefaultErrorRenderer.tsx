@@ -5,11 +5,7 @@ import type { ErrorRendererProps } from "../../types/renderers";
 /**
  * Default renderer for error message type
  */
-export const DefaultErrorRenderer: React.FC<ErrorRendererProps> = ({
-  message,
-  taskId: _taskId,
-  isLatest: _isLatest,
-}) => {
+export const DefaultErrorRenderer: React.FC<ErrorRendererProps> = ({ message }) => {
   return (
     <div className="flex justify-center w-full mb-3">
       {/* 系统消息样式 - 居中显示，类似 IM 软件的系统提示 */}

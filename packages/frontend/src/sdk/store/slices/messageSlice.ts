@@ -9,6 +9,82 @@ import { toast } from "@/utils/toast";
 import { combineMessages } from "../../messages/messageCombiner";
 import { getMessageHandler } from "../messageHandlers";
 import type { WebSocketStore } from "../websocket";
+import type { DocType } from "./docSlice";
+
+const checkAndExtractDoc = (
+  message: WebSocketMessage<any>,
+  store: WebSocketStore,
+  taskId: string,
+) => {
+  if (taskId !== store.mainTaskId) return;
+
+  if (message.type === "tool") {
+    try {
+      const parsed = JSON.parse(message.data.message);
+      if (parsed.toolName === "createTaskDocs") {
+        const params = parsed.params;
+        if (params && params.content) {
+          // Use phase from params if available, otherwise try to infer or default
+          const phase = params.phase as DocType | undefined;
+          store.setDocContent(params.content, params.taskName || params.title, phase);
+        }
+      }
+    } catch (e) {
+      // ignore parse error
+      console.error("Error parsing tool message for createTaskDocs", e);
+    }
+  }
+};
+
+interface DocInfo {
+  content: string;
+  title: string;
+}
+
+type DocCollection = Partial<Record<DocType, DocInfo>>;
+
+interface DocsResult {
+  docs: DocCollection;
+  lastEdited: DocType | null;
+}
+
+const findLatestDocs = (messages: WebSocketMessage<any>[]): DocsResult => {
+  const docs: DocCollection = {};
+  let lastEdited: DocType | null = null;
+
+  for (const msg of messages) {
+    if (msg.type === "taskHistory") {
+      const historyData = msg.data as { messages: WebSocketMessage<any>[]; taskId: string };
+      if (historyData.messages && Array.isArray(historyData.messages)) {
+        const nestedDocs = findLatestDocs(historyData.messages);
+        Object.assign(docs, nestedDocs.docs);
+        if (nestedDocs.lastEdited) {
+          lastEdited = nestedDocs.lastEdited;
+        }
+      }
+    } else if (msg.type === "tool") {
+      try {
+        const parsed = JSON.parse(msg.data.message);
+        if (parsed.toolName === "createTaskDocs") {
+          const params = parsed.params;
+          if (params && params.content) {
+            const phase = (params.phase as DocType) || "taskList";
+            if (["requirements", "design", "taskList"].includes(phase)) {
+              docs[phase] = {
+                content: params.content,
+                title: params.taskName || params.title,
+              };
+              lastEdited = phase;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  return { docs, lastEdited };
+};
 
 type Listener<T extends SERVER_SEND_MESSAGE_NAME> = (data: ServerSendMessageData<T>) => void;
 type Unsubscribe = () => void;
@@ -141,6 +217,18 @@ export const createMessageSlice: StateCreator<WebSocketStore, [], [], MessageSli
       return;
     }
 
+    if (
+      message.type === "message" &&
+      messageData.role === "system" &&
+      messageData.content &&
+      messageData.content.includes("Waiting for confirmation")
+    ) {
+      const task = get().tasks[taskId];
+      if (task && task.status !== "waiting_tool_call") {
+        get().setTaskStatus(taskId, "waiting_tool_call");
+      }
+    }
+
     get().addMessageToTask(taskId, message);
     get().notifyListeners(message);
   },
@@ -190,13 +278,80 @@ export const createMessageSlice: StateCreator<WebSocketStore, [], [], MessageSli
 
     const newDisplayMessages = combineMessages(messages as any);
     const latestTask = get().tasks[taskId];
-    console.log("his", newDisplayMessages);
+
+    if (taskId === get().mainTaskId) {
+      // Reset doc state and close sidebar when switching tasks
+      get().setDocState({
+        isOpen: false,
+        documents: {
+          requirements: { content: null, title: "Requirements" },
+          design: { content: null, title: "Design" },
+          taskList: { content: null, title: "Task List" },
+        },
+      });
+
+      const foundDocs = findLatestDocs(messages);
+
+      (Object.keys(foundDocs.docs) as DocType[]).forEach((phase) => {
+        const doc = foundDocs.docs[phase];
+        if (doc) {
+          get().setDocContent(doc.content, doc.title, phase);
+        }
+      });
+
+      if (foundDocs.lastEdited) {
+        get().setActiveDoc(foundDocs.lastEdited);
+      }
+    }
+
+    // Check if the last message is waiting_tool_call
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.type === "waiting_tool_call") {
+      console.log("[handleTaskHistory] Found waiting_tool_call in history");
+      get().setTaskStatus(taskId, "waiting_tool_call");
+
+      // Extract toolName and params from the previous tool message
+      for (let i = messages.length - 2; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.type === "tool") {
+          try {
+            const msgData = msg.data as { message: string };
+            const toolData = JSON.parse(msgData.message);
+            if (toolData.toolName && toolData.params) {
+              get().setPendingToolCall(taskId, {
+                toolName: toolData.toolName,
+                params: toolData.params,
+              });
+              console.log("[handleTaskHistory] Set pending tool call from history:", {
+                toolName: toolData.toolName,
+              });
+              break;
+            }
+          } catch (e) {
+            console.error("[handleTaskHistory] Failed to parse tool message:", e);
+          }
+        }
+      }
+    } else if (
+      lastMessage &&
+      lastMessage.type === "message" &&
+      (lastMessage.data as any).role === "system" &&
+      (lastMessage.data as any).content &&
+      (lastMessage.data as any).content.includes("Waiting for confirmation")
+    ) {
+      if (get().tasks[taskId].status !== "waiting_tool_call") {
+        get().setTaskStatus(taskId, "waiting_tool_call");
+      }
+    }
+
+    // Get the latest task state after status updates
+    const updatedTask = get().tasks[taskId];
 
     set({
       tasks: {
         ...get().tasks,
         [taskId]: {
-          ...latestTask,
+          ...updatedTask,
           rawMessages: messages,
           displayMessages: newDisplayMessages,
           lastUpdateTime: Date.now(),
@@ -227,6 +382,9 @@ export const createMessageSlice: StateCreator<WebSocketStore, [], [], MessageSli
     const newDisplayMessages = combineMessages(newRawMessages as any);
 
     const latestTask = get().tasks[taskId];
+
+    // Check for createDoc
+    checkAndExtractDoc(message, get(), taskId);
 
     set({
       tasks: {

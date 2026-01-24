@@ -3,11 +3,23 @@ import type { StateCreator } from "zustand";
 import type { DisplayMessageType } from "../../messages/types";
 import type { WebSocketStore } from "../websocket";
 
+export type TaskStatus =
+  | "idle"
+  | "streaming"
+  | "interrupted"
+  | "completed"
+  | "error"
+  | "waiting_tool_call";
+
 export interface TaskState {
   rawMessages: Array<WebSocketMessage<SERVER_SEND_MESSAGE_NAME> | WebSocketMessage<any>>;
   displayMessages: DisplayMessageType[];
-  isLoading: boolean;
+  status: TaskStatus;
   lastUpdateTime: number;
+  pendingToolCall?: {
+    toolName: string;
+    params: any;
+  };
 }
 
 export interface TaskSlice {
@@ -19,7 +31,11 @@ export interface TaskSlice {
   registerTask: (taskId: string) => void;
   unregisterTask: (taskId: string) => void;
   setActiveTask: (taskId: string | null) => void;
-  setLoading: (taskId: string, isLoading: boolean) => void;
+  setTaskStatus: (taskId: string, status: TaskStatus) => void;
+  setPendingToolCall: (
+    taskId: string,
+    toolCall: { toolName: string; params: any } | undefined,
+  ) => void;
   clearMessages: (taskId: string) => void;
   setMainTaskId: (taskId: string) => void;
   createNewConversation: () => void;
@@ -43,7 +59,7 @@ export const createTaskSlice: StateCreator<WebSocketStore, [], [], TaskSlice> = 
           [taskId]: {
             rawMessages: [],
             displayMessages: [],
-            isLoading: false,
+            status: "idle",
             lastUpdateTime: Date.now(),
           },
         },
@@ -62,7 +78,7 @@ export const createTaskSlice: StateCreator<WebSocketStore, [], [], TaskSlice> = 
     set({ activeTaskId: taskId });
   },
 
-  setLoading: (taskId, isLoading) => {
+  setTaskStatus: (taskId, status) => {
     const { tasks } = get();
     const task = tasks[taskId];
     if (!task) return;
@@ -72,7 +88,23 @@ export const createTaskSlice: StateCreator<WebSocketStore, [], [], TaskSlice> = 
         ...tasks,
         [taskId]: {
           ...task,
-          isLoading,
+          status,
+        },
+      },
+    });
+  },
+
+  setPendingToolCall: (taskId, toolCall) => {
+    const { tasks } = get();
+    const task = tasks[taskId];
+    if (!task) return;
+
+    set({
+      tasks: {
+        ...tasks,
+        [taskId]: {
+          ...task,
+          pendingToolCall: toolCall,
         },
       },
     });
@@ -103,6 +135,10 @@ export const createTaskSlice: StateCreator<WebSocketStore, [], [], TaskSlice> = 
     set({ mainTaskId: taskId });
     get().registerTask(taskId);
 
+    // Close doc sidebar immediately when switching tasks
+    // It will be reopened by handleTaskHistory if the new task has docs
+    get().closeDoc();
+
     if (socket && socket.readyState === WebSocket.OPEN && taskId) {
       socket.send(
         JSON.stringify({
@@ -119,6 +155,9 @@ export const createTaskSlice: StateCreator<WebSocketStore, [], [], TaskSlice> = 
     if (mainTaskId) {
       get().clearMessages(mainTaskId);
     }
+
+    // Close doc sidebar when creating new conversation
+    get().closeDoc();
 
     // Reset to empty state - server will create new task on first message
     set({ mainTaskId: "", activeTaskId: null });

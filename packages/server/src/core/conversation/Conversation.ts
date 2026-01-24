@@ -1,12 +1,19 @@
-import type { ConversationStatus, ToolInterface } from "@amigo-llm/types";
+import type { ChatMessage, ConversationStatus, ToolInterface } from "@amigo-llm/types";
 import type { ChatOpenAI } from "@langchain/openai";
 import { v4 as uuidV4 } from "uuid";
 import { FilePersistedMemory } from "../memory";
 import { getLlm } from "../model";
 import { getSystemPrompt } from "../systemPrompt";
-import { BASIC_TOOLS, ToolService } from "../tools";
+import { MAIN_BASIC_TOOLS, SUB_BASIC_TOOLS, ToolService } from "../tools";
 
 export type ConversationType = "main" | "sub";
+
+export interface PendingToolCall {
+  toolName: string;
+  params: unknown;
+  fullToolCall: string;
+  type: ChatMessage["type"];
+}
 
 /**
  * 会话
@@ -21,6 +28,7 @@ export class Conversation {
 
   private _userInput = "";
   private _isAborted = false;
+  private _pendingToolCall: PendingToolCall | null = null;
 
   private constructor(params: {
     id: string;
@@ -60,6 +68,14 @@ export class Conversation {
 
   set isAborted(value: boolean) {
     this._isAborted = value;
+  }
+
+  get pendingToolCall(): PendingToolCall | null {
+    return this._pendingToolCall;
+  }
+
+  set pendingToolCall(value: PendingToolCall | null) {
+    this._pendingToolCall = value;
   }
 
   get isNew(): boolean {
@@ -122,16 +138,19 @@ export class Conversation {
     const llm = getLlm();
     const type: ConversationType = memory.getFatherTaskId ? "sub" : "main";
 
+    // 根据任务类型过滤基础工具
+    const baseTools = type === "main" ? MAIN_BASIC_TOOLS : SUB_BASIC_TOOLS;
+
     // 恢复工具配置
     const toolNames = memory.toolNames;
-    const totalTools = BASIC_TOOLS.concat(allCustomTools);
+    const totalTools = baseTools.concat(allCustomTools);
     const userCustomedTools = toolNames
       .map((name) => totalTools.find((tool) => tool.name === name))
       // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
       .filter((tool): tool is ToolInterface<any> => tool !== undefined);
 
     const toolService = new ToolService(
-      BASIC_TOOLS,
+      baseTools,
       type === "main" ? allCustomTools : userCustomedTools,
     );
 

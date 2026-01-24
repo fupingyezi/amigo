@@ -13,6 +13,7 @@ import { TaskCreatedMessageSchema } from "./taskCreated";
 import { TaskHistoryMessageSchema } from "./taskHistory";
 import { ThinkMessageSchema } from "./think";
 import { ToolMessageSchema } from "./tool";
+import { WaitingToolCallMessageSchema } from "./waitingToolCall";
 
 export const ErrorMessageSchema = z.object({
   type: z.literal("error"),
@@ -41,6 +42,7 @@ export const BASE_SERVER_MESSAGE_SCHEMAS = [
   ErrorMessageSchema,
   AlertMessageSchema,
   TaskCreatedMessageSchema,
+  WaitingToolCallMessageSchema,
 ] as const;
 
 export const ServerSendMessageSchema = z.discriminatedUnion("type", BASE_SERVER_MESSAGE_SCHEMAS);

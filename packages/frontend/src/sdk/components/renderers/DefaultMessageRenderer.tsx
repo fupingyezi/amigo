@@ -5,11 +5,7 @@ import type { CommonMessageRendererProps } from "../../types/renderers";
 /**
  * Default renderer for common message type
  */
-export const DefaultMessageRenderer: React.FC<CommonMessageRendererProps> = ({
-  message,
-  taskId: _taskId,
-  isLatest: _isLatest,
-}) => {
+export const DefaultMessageRenderer: React.FC<CommonMessageRendererProps> = ({ message }) => {
   return (
     <div className="chat chat-start">
       <div className="chat-bubble bg-neutral-100 text-neutral-900 rounded-xl px-4 py-3 shadow-none max-w-[85%] break-words overflow-hidden">

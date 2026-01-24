@@ -2,31 +2,33 @@ import type { ToolNames } from "@amigo-llm/types";
 import { AlertCircle } from "lucide-react";
 import type React from "react";
 import type { ToolMessageRendererProps } from "../../types/renderers";
-import { DefaultAssignTaskRenderer } from "./tools/DefaultAssignTaskRenderer";
+import { DefaultBashRenderer } from "./tools/DefaultBashRenderer";
 import { DefaultBrowserSearchRenderer } from "./tools/DefaultBrowserSearchRenderer";
-import { DefaultUpdateTodolistRenderer } from "./tools/DefaultUpdateTodolistRenderer";
+import { DefaultCreateTaskDocsRenderer } from "./tools/DefaultCreateTaskDocsRenderer";
+import { DefaultEditFileRenderer } from "./tools/DefaultEditFileRenderer";
+import { DefaultReadFileRenderer } from "./tools/DefaultReadFileRenderer";
+import { DefaultReadTaskDocsRenderer } from "./tools/DefaultReadTaskDocsRenderer";
 
 // Tool-specific renderer map
 const toolRendererMap: {
   [K in ToolNames]?: React.FC<ToolMessageRendererProps<K>>;
 } = {
-  assignTasks: DefaultAssignTaskRenderer as React.FC<ToolMessageRendererProps<"assignTasks">>,
-  updateTodolist: DefaultUpdateTodolistRenderer as React.FC<
-    ToolMessageRendererProps<"updateTodolist">
-  >,
   browserSearch: DefaultBrowserSearchRenderer as React.FC<
     ToolMessageRendererProps<"browserSearch">
   >,
+  bash: DefaultBashRenderer as React.FC<ToolMessageRendererProps<"bash">>,
+  editFile: DefaultEditFileRenderer as React.FC<ToolMessageRendererProps<"editFile">>,
+  readFile: DefaultReadFileRenderer as React.FC<ToolMessageRendererProps<"readFile">>,
+  createTaskDocs: DefaultCreateTaskDocsRenderer as React.FC<
+    ToolMessageRendererProps<"createTaskDocs">
+  >,
+  readTaskDocs: DefaultReadTaskDocsRenderer as React.FC<ToolMessageRendererProps<"readTaskDocs">>,
 };
 
 /**
  * Generic tool renderer for tools without custom renderers
  */
-const GenericToolRenderer: React.FC<ToolMessageRendererProps<ToolNames>> = ({
-  message,
-  taskId: _taskId,
-  isLatest: _isLatest,
-}) => {
+const GenericToolRenderer: React.FC<ToolMessageRendererProps<ToolNames>> = ({ message }) => {
   const paramsStr = JSON.stringify(message.params, null, 2);
 
   // If there's an error, use system message style

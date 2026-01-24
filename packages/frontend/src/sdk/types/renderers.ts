@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import type {
   AlertDisplayType,
   AskFollowupQuestionType,
-  AssignTaskUpdatedDisplayType,
   CompletionResultType,
   DisplayMessageType,
   ErrorDisplayType,
@@ -34,7 +33,6 @@ export type AskFollowupQuestionRendererProps = MessageRendererProps<AskFollowupQ
 export type InterruptRendererProps = MessageRendererProps<InterruptDisplayType>;
 export type ErrorRendererProps = MessageRendererProps<ErrorDisplayType>;
 export type AlertRendererProps = MessageRendererProps<AlertDisplayType>;
-export type AssignTaskUpdatedRendererProps = MessageRendererProps<AssignTaskUpdatedDisplayType>;
 
 /**
  * Renderer function type
@@ -55,5 +53,4 @@ export interface MessageRendererMap {
   interrupt: MessageRenderer<InterruptDisplayType>;
   error: MessageRenderer<ErrorDisplayType>;
   alert: MessageRenderer<AlertDisplayType>;
-  assignTaskUpdated: MessageRenderer<AssignTaskUpdatedDisplayType>;
 }

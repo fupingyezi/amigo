@@ -5,14 +5,19 @@ import { XMLParser } from "fast-xml-parser";
 import { ensureArray } from "@/utils/array";
 import { logger } from "@/utils/logger";
 import { AskFollowupQuestions } from "./askFollowupQuestions";
-import { AssignTasks } from "./assignTasks";
 import { Bash } from "./bash";
 import { BrowserSearch } from "./browserSearch";
+import { CompleteTask } from "./completeTask";
 import { CompletionResult } from "./completionResult";
 import { EditFile } from "./editFile";
 import { ReadFile } from "./readFile";
-import { CreateTaskDocs, GetTaskListProgress, ReadTaskDocs, UpdateTaskList } from "./taskDocs";
-import { UpdateTodolist } from "./todolist";
+import {
+  CreateTaskDocs,
+  ExecuteTaskList,
+  GetTaskListProgress,
+  ReadTaskDocs,
+  UpdateTaskList,
+} from "./taskDocs/index";
 
 export class ToolService {
   // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
@@ -391,29 +396,38 @@ export class ToolService {
   }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
-export const BASIC_TOOLS: ToolInterface<any>[] = [
+export const MAIN_BASIC_TOOLS: ToolInterface<any>[] = [
   AskFollowupQuestions,
-  UpdateTodolist,
   CompletionResult,
+  CompleteTask,
   BrowserSearch,
   EditFile,
   ReadFile,
   Bash,
   CreateTaskDocs,
   ReadTaskDocs,
-  UpdateTaskList,
+  ExecuteTaskList,
   GetTaskListProgress,
 ];
 
+export const SUB_BASIC_TOOLS: ToolInterface<any>[] = [
+  BrowserSearch,
+  EditFile,
+  ReadFile,
+  Bash,
+  CreateTaskDocs,
+  ReadTaskDocs,
+  UpdateTaskList,
+  CompleteTask,
+];
+
 // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
-export const CUSTOMED_TOOLS: ToolInterface<any>[] = [AssignTasks];
+export const CUSTOMED_TOOLS: ToolInterface<any>[] = [];
 
 export {
   AskFollowupQuestions,
-  UpdateTodolist,
   CompletionResult,
-  AssignTasks,
+  CompleteTask,
   BrowserSearch,
   EditFile,
   ReadFile,
@@ -422,4 +436,5 @@ export {
   ReadTaskDocs,
   UpdateTaskList,
   GetTaskListProgress,
+  ExecuteTaskList,
 };

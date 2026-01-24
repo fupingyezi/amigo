@@ -91,23 +91,69 @@ export const Bash = createTool({
       }
 
       logger.info(`[Bash] Running command: ${fullCommand}`);
-      const output = await sandbox.runCommand(fullCommand);
-      logger.info(`[Bash] Command output: ${output?.substring(0, 200)}...`);
 
-      const exitCodeResult = await sandbox.runCommand("echo $?");
-      const exitCode = Number.parseInt(exitCodeResult?.trim() || "0", 10);
+      // Capture both output and exit code in a single command execution
+      // We append "; echo EXIT_CODE:$?" to capture the exit code reliably
+      const commandWithExitCode = `${fullCommand}; echo EXIT_CODE:$?`;
+      const rawOutput = await sandbox.runCommand(commandWithExitCode);
+
+      logger.info(`[Bash] Command raw output length: ${rawOutput?.length}`);
+      logger.info(`[Bash] Command raw output (full): ${JSON.stringify(rawOutput)}`);
+
+      // Parse output and exit code
+      let output = rawOutput || "";
+      let exitCode = 0;
+
+      // Extract exit code - look for EXIT_CODE:number pattern anywhere in the output
+      // Use a more flexible approach: find the last occurrence
+      const lines = output.split(/\r?\n/);
+      logger.info(
+        `[Bash] Output lines: ${lines.length}, last line: ${JSON.stringify(lines[lines.length - 1])}`,
+      );
+
+      // Find the EXIT_CODE line (should be the last non-empty line)
+      let exitCodeLineIndex = -1;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (line?.trim().startsWith("EXIT_CODE:")) {
+          exitCodeLineIndex = i;
+          break;
+        }
+      }
+
+      if (exitCodeLineIndex >= 0) {
+        const exitCodeLine = lines[exitCodeLineIndex];
+        if (exitCodeLine) {
+          const match = exitCodeLine.match(/EXIT_CODE:(\d+)/);
+          if (match?.[1]) {
+            exitCode = Number.parseInt(match[1], 10);
+            // Remove the exit code line from output
+            lines.splice(exitCodeLineIndex, 1);
+            output = lines.join("\n").trim();
+            logger.info(
+              `[Bash] Found EXIT_CODE line at index ${exitCodeLineIndex}: ${exitCodeLine}, parsed exitCode: ${exitCode}`,
+            );
+          }
+        }
+      } else {
+        logger.warn(`[Bash] Could not find EXIT_CODE line in output`);
+      }
 
       const success = exitCode === 0;
       const statusText = success ? "成功" : "失败";
-      const resultMsg = `命令执行${statusText}${workingDir ? `（工作目录: ${workingDir}）` : ""}`;
 
-      logger.info(`[Bash] ${resultMsg}: ${command}`);
+      // Include output in the message for the AI
+      const outputPreview =
+        output.length > 500 ? `${output.substring(0, 500)}...(truncated)` : output;
+      const resultMsg = `命令执行${statusText}${workingDir ? `（工作目录: ${workingDir}）` : ""}\n退出码: ${exitCode}${output ? `\n输出:\n${outputPreview}` : ""}`;
+
+      logger.info(`[Bash] ${statusText}: ${command}, exitCode: ${exitCode}`);
 
       return {
         message: resultMsg,
         toolResult: {
           success,
-          output: output?.trim() || "",
+          output,
           exitCode,
           message: resultMsg,
         },

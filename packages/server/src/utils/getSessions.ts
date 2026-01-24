@@ -24,11 +24,13 @@ export const getSessionHistories = async () => {
         const originalJsonPath = path.join(
           globalStoragePath,
           taskId,
+          "messages",
           `${StorageType.ORIGINAL}.json`,
         );
         const frontendJsonPath = path.join(
           globalStoragePath,
           taskId,
+          "messages",
           `${StorageType.FRONT_END}.json`,
         );
         try {

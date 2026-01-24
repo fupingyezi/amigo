@@ -11,15 +11,15 @@ export const handleAck: MessageHandler = (message, store) => {
     taskId = messageData.taskId;
   }
 
-  // 处理用户消息确认
+  // 处理用户消息确认 - 进入 streaming 状态
   if (messageData.targetMessage?.type === "userSendMessage") {
-    store.setLoading(taskId, true);
+    store.setTaskStatus(taskId, "streaming");
     store.updateUserMessageStatus(taskId, messageData.targetMessage.data.message, "acked");
   }
 
-  // 处理 resume 消息确认
+  // 处理 resume 消息确认 - 进入 streaming 状态
   if (messageData.targetMessage?.type === "resume") {
-    store.setLoading(taskId, true);
+    store.setTaskStatus(taskId, "streaming");
   }
 
   return true; // ack 消息不需要添加到 displayMessages

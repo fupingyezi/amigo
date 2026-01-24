@@ -45,6 +45,7 @@ export const parseStreamingXml = async ({
     for await (const chunk of stream) {
       if (typeof chunk.content === "string") {
         buffer += chunk.content;
+        console.log("[parseStreamingXml] 收到 chunk:", JSON.stringify(chunk.content));
       }
 
       if (!isMatched) {
@@ -92,14 +93,29 @@ export const parseStreamingXml = async ({
 
       if (isEndTagFound) {
         const fullToolCall = buffer.slice(0, endLabelIndex + endTag.length);
+        console.log("[parseStreamingXml] 找到完整工具调用:", currentTool);
+        console.log("[parseStreamingXml] fullToolCall:", fullToolCall);
+        console.log(
+          "[parseStreamingXml] 工具调用后原本剩余 buffer:",
+          JSON.stringify(buffer.slice(endLabelIndex + endTag.length)),
+        );
         await onFullToolCallFound?.(fullToolCall, currentTool, currentType);
-        buffer = buffer.slice(endLabelIndex + endTag.length);
+        // 清空 buffer，工具调用后的内容不应该被当作消息发送
+        buffer = "";
+        console.log("[parseStreamingXml] 已清空 buffer");
         isMatched = false;
       } else if (isSelfClosing && selfClosingMatch) {
         // 处理自闭合标签
         const fullToolCall = selfClosingMatch[0];
+        console.log("[parseStreamingXml] 找到自闭合工具调用:", currentTool);
+        console.log(
+          "[parseStreamingXml] 自闭合工具调用后原本剩余 buffer:",
+          JSON.stringify(buffer.slice(buffer.indexOf(fullToolCall) + fullToolCall.length)),
+        );
         await onFullToolCallFound?.(fullToolCall, currentTool, currentType);
-        buffer = buffer.slice(buffer.indexOf(fullToolCall) + fullToolCall.length);
+        // 清空 buffer，工具调用后的内容不应该被当作消息发送
+        buffer = "";
+        console.log("[parseStreamingXml] 已清空 buffer");
         isMatched = false;
       } else {
         await onPartialToolCallFound?.(buffer, currentTool, currentType);
@@ -116,6 +132,7 @@ export const parseStreamingXml = async ({
   }
 
   if (buffer.length > 0) {
+    console.log("[parseStreamingXml] 流结束，剩余 buffer:", JSON.stringify(buffer));
     await onMessageLeft?.(buffer);
   }
   return currentTool;

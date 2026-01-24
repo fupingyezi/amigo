@@ -142,35 +142,7 @@ const toolProcessor: MessageProcessor<"tool"> = ({ msg, res }) => {
   if (shouldMerge && lastMessage?.type === "tool") {
     // 合并消息：更新最后一条 tool 消息
     // 特殊处理 assignTasks：需要保留已经添加的 taskId
-    let mergedParams = (params as unknown as ToolParams<any>) || lastMessage.params;
-
-    if (toolName === "assignTasks" && params && lastMessage.params) {
-      const oldParams = lastMessage.params as any;
-      const newParams = params as any;
-
-      // 如果两边都有 tasklist，需要合并 taskId
-      if (
-        oldParams?.tasklist &&
-        newParams?.tasklist &&
-        Array.isArray(oldParams.tasklist) &&
-        Array.isArray(newParams.tasklist)
-      ) {
-        const mergedTasklist = newParams.tasklist.map((newTask: any, index: number) => {
-          const oldTask = oldParams.tasklist[index];
-          // 保留旧的 taskId 和 taskStatus（如果存在）
-          return {
-            ...newTask,
-            ...(oldTask?.taskId && { taskId: oldTask.taskId }),
-            ...(oldTask?.taskStatus && { taskStatus: oldTask.taskStatus }),
-          };
-        });
-
-        mergedParams = {
-          ...newParams,
-          tasklist: mergedTasklist,
-        } as unknown as ToolParams<any>;
-      }
-    }
+    const mergedParams = (params as unknown as ToolParams<any>) || lastMessage.params;
 
     res[res.length - 1] = {
       type: "tool",
@@ -261,52 +233,6 @@ const askFollowupQuestionProcessor: MessageProcessor<"askFollowupQuestion"> = ({
   return { handled: true };
 };
 
-const assignTaskUpdatedProcessor: MessageProcessor<"assignTaskUpdated"> = ({ msg, res }) => {
-  if (msg.type !== "assignTaskUpdated") return { handled: false };
-
-  const updateData = msg.data as {
-    index: number;
-    taskId: string;
-    parentTaskId?: string;
-    taskStatus?: string;
-  };
-
-  // 从后往前查找最近的 assignTasks tool
-  for (let i = res.length - 1; i >= 0; i--) {
-    const item = res[i];
-    if (item.type === "tool" && item.toolName === "assignTasks") {
-      // 找到了 assignTasks，给对应的 task 添加 taskId 和 taskStatus
-      const params = item.params as any;
-      if (params?.tasklist && Array.isArray(params.tasklist)) {
-        const task = params.tasklist[updateData.index];
-        if (task) {
-          // 创建新的 tasklist 数组和 params 对象，确保 React 能检测到变化
-          const newTasklist = [...params.tasklist];
-          newTasklist[updateData.index] = {
-            ...task,
-            taskId: updateData.taskId,
-            taskStatus: updateData.taskStatus,
-          };
-
-          const newParams = {
-            ...params,
-            tasklist: newTasklist,
-          };
-
-          // 更新 res 中的项，创建新的对象引用
-          res[i] = {
-            ...item,
-            params: newParams,
-          };
-        }
-      }
-      break;
-    }
-  }
-
-  return { handled: true };
-};
-
 const interruptProcessor: MessageProcessor<"interrupt"> = ({ msg, res }) => {
   if (msg.type !== "interrupt") return { handled: false };
 
@@ -334,6 +260,11 @@ const errorProcessor: MessageProcessor<"error"> = ({ msg, res }) => {
   return { handled: true };
 };
 
+const waitingToolCallProcessor: MessageProcessor<"waiting_tool_call"> = ({ msg, res }) => {
+  if (msg.type !== "waiting_tool_call") return { handled: false };
+  return { handled: true };
+};
+
 const processorMap: Partial<
   Record<SERVER_SEND_MESSAGE_NAME | USER_SEND_MESSAGE_NAME, MessageProcessor<any>>
 > = {
@@ -343,9 +274,9 @@ const processorMap: Partial<
   completionResult: completionResultProcessor,
   tool: toolProcessor,
   askFollowupQuestion: askFollowupQuestionProcessor,
-  assignTaskUpdated: assignTaskUpdatedProcessor,
   interrupt: interruptProcessor,
   error: errorProcessor,
+  waiting_tool_call: waitingToolCallProcessor,
 };
 
 export const combineMessages = (messages: SupportedWebsocketMessage[]): DisplayMessageType[] => {

@@ -100,4 +100,6 @@ export interface UseSendMessageReturn {
   sendInterrupt: (taskId?: string) => void;
   sendResume: (taskId?: string) => void;
   sendLoadTask: (taskId: string) => void;
+  sendConfirm: (taskId: string) => void;
+  sendReject: (taskId: string) => void;
 }

@@ -4,11 +4,7 @@ import type { InterruptRendererProps } from "../../types/renderers";
 /**
  * Default renderer for interrupt message type
  */
-export const DefaultInterruptRenderer: React.FC<InterruptRendererProps> = ({
-  message,
-  taskId: _taskId,
-  isLatest: _isLatest,
-}) => {
+export const DefaultInterruptRenderer: React.FC<InterruptRendererProps> = ({ message }) => {
   return (
     <div className="flex justify-center w-full mb-3">
       <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 rounded-lg text-warning text-xs max-w-[80%]">

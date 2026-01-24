@@ -34,6 +34,20 @@ export class FilePersistedMemory {
   get storagePath() {
     return path.join(getGlobalState("globalStoragePath") || process.cwd(), this.taskId);
   }
+
+  /**
+   * 获取消息存储路径
+   */
+  get messagesPath() {
+    return path.join(this.storagePath, "messages");
+  }
+
+  /**
+   * 获取任务文档存储路径
+   */
+  get taskDocsPath() {
+    return path.join(this.storagePath, "taskDocs");
+  }
   /**
    * 当前 taskId
    */
@@ -69,7 +83,7 @@ export class FilePersistedMemory {
   }
 
   private loadOriginalFromFile(): void {
-    const targetPath = path.join(this.storagePath, `${StorageType.ORIGINAL}.json`);
+    const targetPath = path.join(this.messagesPath, `${StorageType.ORIGINAL}.json`);
     if (existsSync(targetPath)) {
       try {
         const data = JSON.parse(readFileSync(targetPath, "utf-8"));
@@ -92,7 +106,7 @@ export class FilePersistedMemory {
    * 判断是否是新会话（文件不存在或 messages 为空）
    */
   public isNewSession(): boolean {
-    const targetPath = path.join(this.storagePath, `${StorageType.ORIGINAL}.json`);
+    const targetPath = path.join(this.messagesPath, `${StorageType.ORIGINAL}.json`);
     if (!existsSync(targetPath)) {
       return true;
     }
@@ -101,7 +115,7 @@ export class FilePersistedMemory {
   }
 
   private loadWebsocketFromFile(): void {
-    const targetPath = path.join(this.storagePath, `${StorageType.FRONT_END}.json`);
+    const targetPath = path.join(this.messagesPath, `${StorageType.FRONT_END}.json`);
     if (existsSync(targetPath)) {
       try {
         const data = JSON.parse(readFileSync(targetPath, "utf-8"));
@@ -210,7 +224,7 @@ export class FilePersistedMemory {
    */
   public saveOriginalToFile(): boolean {
     try {
-      this.ensureDirectoryExists(this.storagePath);
+      this.ensureDirectoryExists(this.messagesPath);
       const data = {
         messages: this._messages,
         conversationStatus: this._conversationStatus,
@@ -219,7 +233,7 @@ export class FilePersistedMemory {
         fatherTaskId: this.fatherTaskId,
         toolNames: this._toolNames,
       };
-      const realMessageStoragePath = path.join(this.storagePath, `${StorageType.ORIGINAL}.json`);
+      const realMessageStoragePath = path.join(this.messagesPath, `${StorageType.ORIGINAL}.json`);
       writeFileSync(realMessageStoragePath, JSON.stringify(data, null, 2), "utf-8");
       return true;
     } catch (error) {
@@ -234,14 +248,14 @@ export class FilePersistedMemory {
    */
   private saveWebsocketToFile(): boolean {
     try {
-      this.ensureDirectoryExists(this.storagePath);
+      this.ensureDirectoryExists(this.messagesPath);
       const data = {
         messages: this._websocketMessages,
         updatedAt: new Date().toISOString(),
         taskId: this.taskId,
       };
       const websocketMessageStoragePath = path.join(
-        this.storagePath,
+        this.messagesPath,
         `${StorageType.FRONT_END}.json`,
       );
       writeFileSync(websocketMessageStoragePath, JSON.stringify(data, null, 2), "utf-8");

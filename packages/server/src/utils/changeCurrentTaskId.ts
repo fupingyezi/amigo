@@ -20,7 +20,12 @@ export const changeCurrentTaskId = async (
     return;
   }
 
-  const frontendJsonPath = path.join(globalStoragePath, taskId, `${StorageType.FRONT_END}.json`);
+  const frontendJsonPath = path.join(
+    globalStoragePath,
+    taskId,
+    "messages",
+    `${StorageType.FRONT_END}.json`,
+  );
   try {
     const content = await fs.promises.readFile(frontendJsonPath, "utf-8");
     const data = JSON.parse(content);
