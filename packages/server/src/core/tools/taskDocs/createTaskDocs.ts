@@ -18,7 +18,7 @@ export const CreateTaskDocs = createTool({
     "仅在处理复杂项目或严肃任务时使用。简单任务或闲聊请勿使用此工具。\n" +
     "1. **requirements:** 记录需求\n" +
     "2. **design:** 记录设计\n" +
-    "3. **taskList:** 记录执行步骤\n",
+    "3. **taskList:** 记录执行步骤。注意：在 taskList 中，如果任务之间有依赖关系，请在任务描述末尾使用 `[deps: X.Y]` 格式注明，以便进行拓扑排序。\n",
 
   useExamples: [
     `<createTaskDocs>
@@ -41,7 +41,7 @@ export const CreateTaskDocs = createTool({
 
 ### Phase 1: 基础实现
 - [ ] Task 1.1: 实现数据查询接口 [tools: readFile, editFile]
-- [ ] Task 1.2: 实现 CSV 格式导出 [tools: editFile]
+- [ ] Task 1.2: 实现 CSV 格式导出 [tools: editFile, deps: 1.1]
 
 ## Progress
 - Total: 2 tasks

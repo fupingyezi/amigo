@@ -18,6 +18,8 @@ export interface ChecklistItem {
   description: string;
   /** 缩进级别（空格数） */
   indentLevel: number;
+  /** 依赖的任务描述或 ID 列表 */
+  dependencies: string[];
 }
 
 /**
@@ -47,6 +49,35 @@ export interface ChecklistParseResult {
 const CHECKLIST_PATTERN = /^(\s*)-\s+\[([ xX])\]\s+(.+)$/;
 
 /**
+ * 提取任务 ID (例如从 "Task 1.1: ..." 中提取 "1.1")
+ * @param description 任务描述
+ * @returns 任务 ID 或 null
+ */
+export function getTaskId(description: string): string | null {
+  const match = description.match(/^Task\s+([\d.]+):/i);
+  return match ? match[1] || null : null;
+}
+
+/**
+ * 解析描述中的依赖项
+ * 仅支持 [deps: Task 1.1, Task 1.2] 格式
+ * @param description 任务描述
+ * @returns 依赖项列表
+ */
+export function parseDependenciesFromDescription(description: string): string[] {
+  // 匹配 [deps: ...]
+  const depsMatch = description.match(/\[deps:\s*([^\]]+)\]/);
+  if (depsMatch && depsMatch[1]) {
+    return depsMatch[1]
+      .split(",")
+      .map((d) => d.replace(/Task\s+/i, "").trim())
+      .filter((d) => d.length > 0);
+  }
+
+  return [];
+}
+
+/**
  * 解析单行 checklist 项
  * @param line 行内容
  * @param lineNumber 行号
@@ -65,6 +96,7 @@ export function parseChecklistLine(line: string, lineNumber: number): ChecklistI
     completed: checkmark?.toLowerCase() === "x",
     description: description?.trim() || "",
     indentLevel: indent?.length ?? 0,
+    dependencies: parseDependenciesFromDescription(description || ""),
   };
 }
 
@@ -327,4 +359,62 @@ export function updateChecklistItemContent(
 export function isAllCompleted(content: string): boolean {
   const result = parseChecklist(content);
   return result.total > 0 && result.completed === result.total;
+}
+
+/**
+ * 对任务项进行拓扑排序
+ * @param items 任务项列表
+ * @returns 排序后的任务项列表
+ */
+export function sortTasksTopologically(items: ChecklistItem[]): ChecklistItem[] {
+  const sorted: ChecklistItem[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  const itemsMap = new Map<string, ChecklistItem>();
+  for (const item of items) {
+    const id = getTaskId(item.description);
+    if (id) {
+      itemsMap.set(id, item);
+    }
+  }
+
+  const visit = (id: string) => {
+    if (visiting.has(id)) {
+      throw new Error(`检测到循环依赖: ${id}`);
+    }
+    if (!visited.has(id)) {
+      visiting.add(id);
+      const item = itemsMap.get(id);
+      if (item?.dependencies) {
+        for (const depId of item.dependencies) {
+          // 尝试查找对应的任务
+          if (itemsMap.has(depId)) {
+            visit(depId);
+          }
+        }
+      }
+      visiting.delete(id);
+      visited.add(id);
+      if (item) {
+        sorted.push(item);
+      }
+    }
+  };
+
+  for (const id of itemsMap.keys()) {
+    visit(id);
+  }
+
+  // 添加那些没有 ID 的项（虽然在规范的任务列表中不应该发生）
+  for (const item of items) {
+    const id = getTaskId(item.description);
+    if (!id || !itemsMap.has(id)) {
+      if (!sorted.includes(item)) {
+        sorted.push(item);
+      }
+    }
+  }
+
+  return sorted;
 }

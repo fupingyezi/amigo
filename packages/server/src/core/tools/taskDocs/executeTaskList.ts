@@ -4,6 +4,7 @@ import type { ToolInterface } from "@amigo-llm/types";
 import { taskOrchestrator } from "@/core/conversation";
 import { SubTaskManager } from "@/core/conversation/SubTaskManager";
 import {
+  getTaskId,
   parseChecklist,
   updateChecklistItemContent,
   updateProgressSection,
@@ -100,153 +101,175 @@ export const ExecuteTaskList = createTool({
 
       // 执行任务
       const CONCURRENCY_LIMIT = 2;
-      const results = [];
+      const results: any[] = [];
+      const completedTaskIds = new Set<string>();
+      const runningTaskIds = new Set<string>();
 
-      for (let i = 0; i < pendingTasks.length; i += CONCURRENCY_LIMIT) {
-        const batch = pendingTasks.slice(i, i + CONCURRENCY_LIMIT);
-
-        // 1. 批量标记任务为进行中 (In Progress)
-        let currentContentForBatch = readFileSync(filePath, "utf-8");
-        for (const taskItem of batch) {
-          const { description, lineNumber } = taskItem;
-          // 避免重复添加 (In Progress)
-          if (!description.includes("(In Progress)")) {
-            currentContentForBatch = updateChecklistItemContent(
-              currentContentForBatch,
-              lineNumber,
-              `${description} (In Progress)`,
-              false,
-            );
-          }
+      // 初始化已完成的任务 ID
+      for (const item of parseResult.items) {
+        if (item.completed) {
+          const id = getTaskId(item.description);
+          if (id) completedTaskIds.add(id);
         }
-        // 写入标记后的内容
-        writeFileSync(filePath, currentContentForBatch, "utf-8");
+      }
 
-        const batchResults = await Promise.all(
-          batch.map(async (taskItem, batchIndex) => {
-            const index = i + batchIndex;
-            const { description } = taskItem;
-            // 去除 (In Progress) 标记
-            const cleanDescriptionForAgent = description.replace(/\(In Progress\)$/, "").trim();
+      // 获取所有任务项（包括已完成的），用于依赖查找
+      const allTasks = parseResult.items;
 
-            // 解析工具集
-            const { cleanDescription, tools: requestedTools } =
-              parseToolsFromDescription(cleanDescriptionForAgent);
+      while (true) {
+        // 1. 查找就绪的任务
+        const readyTasks = allTasks.filter((item) => {
+          const id = getTaskId(item.description);
+          if (!id) return false; // 忽略没有 ID 的项
+          if (item.completed) return false; // 已完成
+          if (runningTaskIds.has(id)) return false; // 正在运行
 
-            // 定义子任务不允许使用的工具（任务分配相关）
-            const FORBIDDEN_SUB_TASK_TOOLS = [
-              "createTaskDocs",
-              "readTaskDocs",
-              "updateTaskList",
-              "getTaskListProgress",
-              "executeTaskList",
-            ];
+          // 检查依赖
+          if (item.dependencies && item.dependencies.length > 0) {
+            return item.dependencies.every((depId) => completedTaskIds.has(depId));
+          }
+          return true;
+        });
 
-            // 验证工具
-            // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
-            const availableTools: ToolInterface<any>[] = [];
-            const invalidTools: string[] = [];
-            const forbiddenTools: string[] = [];
+        // 2. 如果没有就绪任务且没有正在运行的任务，说明执行完毕
+        if (readyTasks.length === 0 && runningTaskIds.size === 0) {
+          break;
+        }
 
-            for (const toolName of requestedTools) {
-              if (FORBIDDEN_SUB_TASK_TOOLS.includes(toolName)) {
-                forbiddenTools.push(toolName);
-                logger.warn(
-                  `[ExecuteTaskList] 子任务 "${cleanDescription}" 请求了禁止使用的工具: ${toolName}`,
-                );
-                continue;
+        // 3. 准备启动新任务
+        const tasksToStart = readyTasks.slice(0, CONCURRENCY_LIMIT - runningTaskIds.size);
+
+        if (tasksToStart.length > 0) {
+          // 标记并启动任务
+          for (const taskItem of tasksToStart) {
+            const id = getTaskId(taskItem.description)!;
+            runningTaskIds.add(id);
+
+            // 异步执行任务，不阻塞循环
+            (async () => {
+              const { description, lineNumber } = taskItem;
+              // 标记为 In Progress
+              try {
+                const currentContent = readFileSync(filePath, "utf-8");
+                if (!description.includes("(In Progress)")) {
+                  const updated = updateChecklistItemContent(
+                    currentContent,
+                    lineNumber,
+                    `${description} (In Progress)`,
+                    false,
+                  );
+                  writeFileSync(filePath, updated, "utf-8");
+                }
+              } catch (e) {
+                logger.error(`[ExecuteTaskList] 标记任务开始失败: ${e}`);
               }
 
-              // biome-ignore lint/suspicious/noExplicitAny: 用于工具集合
-              const tool = getToolByName(toolName) as ToolInterface<any> | undefined;
-              if (tool) {
-                availableTools.push(tool);
-              } else {
-                invalidTools.push(toolName);
+              const cleanDescriptionForAgent = description.replace(/\(In Progress\)$/, "").trim();
+              const { cleanDescription, tools: requestedTools } =
+                parseToolsFromDescription(cleanDescriptionForAgent);
+
+              // 验证并准备工具
+              const FORBIDDEN_SUB_TASK_TOOLS = [
+                "createTaskDocs",
+                "readTaskDocs",
+                "updateTaskList",
+                "getTaskListProgress",
+                "executeTaskList",
+              ];
+
+              const availableTools: ToolInterface<any>[] = [];
+              const invalidTools: string[] = [];
+              const forbiddenTools: string[] = [];
+
+              for (const toolName of requestedTools) {
+                if (FORBIDDEN_SUB_TASK_TOOLS.includes(toolName)) {
+                  forbiddenTools.push(toolName);
+                  continue;
+                }
+                const tool = getToolByName(toolName) as ToolInterface<any> | undefined;
+                if (tool) {
+                  availableTools.push(tool);
+                } else {
+                  invalidTools.push(toolName);
+                }
               }
-            }
 
-            if (invalidTools.length > 0) {
-              logger.warn(
-                `[ExecuteTaskList] 任务 "${cleanDescription}" 请求了不存在的工具: ${invalidTools.join(", ")}`,
-              );
-            }
-
-            // 生成 subAgentPrompt
-            const subAgentPrompt = `你是一个专业的任务执行代理。
-
+              // 生成 prompt 并执行
+              const subAgentPrompt = `你是一个专业的任务执行代理。
 **任务目标：** ${cleanDescription}
-
-**可用工具：** ${availableTools.length > 0 ? availableTools.map((t) => t.name).join(", ") : "基础工具（不包括任务分配工具）"}
-
-${forbiddenTools.length > 0 ? `\n⚠️ **警告：** 任务描述中请求了禁止的工具：${forbiddenTools.join(", ")}。子任务不允许再次分配任务。\n` : ""}
-**设计参考：**
-${designContent ? designContent : "无设计文档"}
-
+**可用工具：** ${availableTools.length > 0 ? availableTools.map((t) => t.name).join(", ") : "基础工具"}
+**设计参考：** ${designContent || "无设计文档"}
 **执行要求：**
-1. 专注完成任务目标，不要偏离
-2. 使用提供的工具完成任务
-3. 完成后使用 completionResult 返回详细结果
-4. 结果应包含实际内容，而不是描述
-5. ⚠️ 你不能创建子任务或分配任务给其他代理`;
+1. 专注完成任务目标
+2. 使用提供的工具
+3. 完成后使用 completionResult 返回结果`;
 
-            // 使用 TaskOrchestrator 运行子任务，传递 taskDescription 用于状态管理
-            let summary: string;
+              let summary: string;
+              try {
+                const result = await taskOrchestrator.runSubTask({
+                  subPrompt: subAgentPrompt,
+                  parentId: taskId,
+                  target: cleanDescription,
+                  tools: availableTools,
+                  taskDescription: cleanDescriptionForAgent,
+                });
+                summary = result.result;
+              } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                summary = `任务执行失败: ${errorMsg}`;
+                new SubTaskManager(taskId as string).markTaskFailed(
+                  cleanDescriptionForAgent,
+                  errorMsg,
+                );
+              }
 
-            try {
-              const result = await taskOrchestrator.runSubTask({
-                subPrompt: subAgentPrompt,
-                parentId: taskId,
+              // 任务完成，更新状态
+              try {
+                const currentContent = readFileSync(filePath, "utf-8");
+                const updated = updateChecklistItemContent(
+                  currentContent,
+                  lineNumber,
+                  cleanDescriptionForAgent,
+                  true,
+                );
+                const final = updateProgressSection(updated);
+                writeFileSync(filePath, final, "utf-8");
+              } catch (e) {
+                logger.error(`[ExecuteTaskList] 更新任务完成状态失败: ${e}`);
+              }
+
+              results.push({
                 target: cleanDescription,
-                tools: availableTools,
-                index,
-                taskDescription: cleanDescriptionForAgent, // TaskOrchestrator 会自动管理状态
+                summary,
+                invalidTools: invalidTools.length > 0 ? invalidTools : undefined,
               });
 
-              summary = result.result;
-            } catch (error) {
-              const errorMsg = error instanceof Error ? error.message : String(error);
-              summary = `任务执行失败: ${errorMsg}`;
+              completedTaskIds.add(id);
+              runningTaskIds.delete(id);
+            })();
+          }
+        }
 
-              // 如果执行失败，标记任务失败
-              const subTaskManager = new SubTaskManager(taskId as string);
-              subTaskManager.markTaskFailed(cleanDescriptionForAgent, errorMsg);
-            }
-
-            // 任务完成，更新文件
-            try {
-              const currentContent = readFileSync(filePath, "utf-8");
-              const updated = updateChecklistItemContent(
-                currentContent,
-                taskItem.lineNumber,
-                cleanDescriptionForAgent,
-                true,
-              ); // 移除 In Progress, 设为 true
-              const final = updateProgressSection(updated);
-              writeFileSync(filePath, final, "utf-8");
-            } catch (updateError) {
-              logger.error(`[ExecuteTaskList] 更新任务状态失败: ${updateError}`);
-            }
-
-            return {
-              target: cleanDescription,
-              summary,
-              requestedTools: requestedTools.length,
-              availableTools: availableTools.length,
-              invalidTools: invalidTools.length > 0 ? invalidTools : undefined,
-            };
-          }),
-        );
-
-        results.push(...batchResults);
+        // 等待一段时间再检查就绪任务，或者直到有任务完成（这里简单使用 sleep）
+        // 在实际生产中可能需要一个 EventEmitter 来通知任务完成
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       const hasInvalidTools = results.some((r) => r.invalidTools);
-      const warningMessage = hasInvalidTools
+      const totalTasksCount = parseResult.total;
+      const completedCount = results.length;
+      const uncompletedCount =
+        totalTasksCount - completedCount - (parseResult.total - pendingTasks.length);
+
+      let warningMessage = hasInvalidTools
         ? "\n⚠️ 警告：部分任务请求了不存在的工具，这些工具已被忽略。"
         : "";
 
-      const executionMsg = `✅ 自动执行完成（${results.length}/${parseResult.total}）${warningMessage}\n\n${results
+      if (uncompletedCount > 0) {
+        warningMessage += `\n⚠️ 警告：有 ${uncompletedCount} 个任务因依赖未满足或配置错误未被执行。`;
+      }
+
+      const executionMsg = `✅ 自动执行完成（${completedCount}/${pendingTasks.length}）${warningMessage}\n\n${results
         .map(
           (r, i) =>
             `任务 ${i + 1}: ${r.target}\n结果: ${r.summary}${r.invalidTools ? `\n⚠️ 无效工具: ${r.invalidTools.join(", ")}` : ""}`,

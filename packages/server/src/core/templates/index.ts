@@ -6,6 +6,8 @@
 // 导出 checklist 解析器
 export * from "./checklistParser";
 
+import { parseDependenciesFromDescription } from "./checklistParser";
+
 /**
  * 文档模板类型
  */
@@ -34,7 +36,7 @@ export interface DesignTemplateParams {
 }
 
 /**
- * 任务项接口
+ * 任务项 interface
  */
 export interface TaskItem {
   id: string;
@@ -45,7 +47,7 @@ export interface TaskItem {
 }
 
 /**
- * 任务阶段接口
+ * 任务阶段 interface
  */
 export interface TaskPhase {
   name: string;
@@ -149,7 +151,7 @@ function formatTaskItem(task: TaskItem): string {
   let line = `- ${checkbox} Task ${task.id}: ${task.description}`;
 
   if (task.dependencies && task.dependencies.length > 0) {
-    line += ` (depends on ${task.dependencies.join(", ")})`;
+    line += ` [deps: ${task.dependencies.join(", ")}]`;
   } else if (task.parallel && task.parallel.length > 0) {
     line += ` (parallel with ${task.parallel.join(", ")})`;
   }
@@ -279,22 +281,30 @@ function escapeRegExp(str: string): string {
  */
 export function parseTaskListItems(
   content: string,
-): { id: string; description: string; completed: boolean }[] {
-  const tasks: { id: string; description: string; completed: boolean }[] = [];
+): { id: string; description: string; completed: boolean; dependencies: string[] }[] {
+  const tasks: { id: string; description: string; completed: boolean; dependencies: string[] }[] =
+    [];
 
   // 匹配 checklist 格式: - [ ] Task X.Y: description 或 - [x] Task X.Y: description
-  const taskPattern = /^-\s+\[([ xX])\]\s+Task\s+([\d.]+):\s*(.+?)(?:\s*\(.*\))?$/gm;
+  // 同时也捕获末尾的 [deps: ...]
+  const taskPattern = /^-\s+\[([ xX])\]\s+Task\s+([\d.]+):\s*(.+?)$/gm;
 
   let match: RegExpExecArray | null = taskPattern.exec(content);
   while (match !== null) {
     const checkmark = match[1];
     const id = match[2];
-    const description = match[3];
-    if (id && description && checkmark) {
+    const rawDescription = match[3] || "";
+
+    if (id && rawDescription && checkmark) {
+      const dependencies = parseDependenciesFromDescription(rawDescription);
+      // 清理描述，去掉依赖部分
+      const description = rawDescription.replace(/\[deps:\s*[^\]]+\]/i, "").trim();
+
       tasks.push({
         id,
-        description: description.trim(),
+        description,
         completed: checkmark.toLowerCase() === "x",
+        dependencies,
       });
     }
     match = taskPattern.exec(content);

@@ -45,9 +45,6 @@ export class CompletionHandler {
       case "completeTask":
         return this.handleCompleteTask(conversation);
 
-      case "createTaskDocs":
-        return this.handleCreateTaskDocs(conversation);
-
       case "askFollowupQuestion":
         return this.handleAskFollowupQuestion(conversation);
 
@@ -123,22 +120,6 @@ export class CompletionHandler {
 
     // 子任务完成后直接返回 false，不需要等待用户输入
     logger.info(`[CompletionHandler] 子任务 ${conversation.id} 已通过 completeTask 完成`);
-    return false;
-  }
-
-  /**
-   * 处理 createTaskDocs 工具
-   */
-  private handleCreateTaskDocs(conversation: Conversation): boolean {
-    // 创建任务文档后，需要用户确认
-    conversation.status = "idle";
-    conversation.userInput = "";
-    broadcaster.broadcast(conversation.id, {
-      type: "conversationOver",
-      data: {
-        reason: "createTaskDocs",
-      },
-    });
     return false;
   }
 

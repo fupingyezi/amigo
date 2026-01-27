@@ -13,6 +13,9 @@ export const getLlm = () => {
     configuration: {
       baseURL: process.env.MODEL_BASE_URL || "https://openrouter.ai/api/v1",
     },
+    modelKwargs: {
+      enable_thinking: true,
+    },
     temperature: Number(process.env.LLM_TEMPERATURE) || 0,
   });
 };
